@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rika's Diversity in Living World</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        /* ... (your existing CSS rules) ... */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars on body */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: #f0f2f5;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quiz-container, .landing-container, .results-container {
+            background-color: #ffffff;
+            overflow: hidden;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .landing-container, .results-container {
+            padding: 30px;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        .results-container {
+            justify-content: flex-start; /* Align results content to top */
+        }
+
+
+        .landing-container h1, .results-container h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2em;
+            font-weight: 600;
+            margin-top: 0;
+        }
+
+        .landing-container input[type="text"] {
+            padding: 10px 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80%;
+            max-width: 300px;
+            font-size: 1em;
+        }
+
+        .start-button, .nav-button, .review-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            margin: 5px;
+            font-weight: 500;
+        }
+
+        .start-button:hover, .nav-button:hover, .review-button:hover {
+            background-color: #0056b3;
+        }
+
+        .quiz-header {
+            background-color: #343a40;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            height: 48px; /* Fixed height */
+            box-sizing: border-box;
+        }
+
+        .quiz-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .user-info {
+            font-size: 0.95em;
+        }
+
+        .quiz-body {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            height: calc(100vh - 48px); /* Full height minus header */
+        }
+
+        .question-nav {
+            width: 200px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            flex-shrink: 0;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .question-nav h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .question-nav-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(35px, 1fr));
+            gap: 8px;
+        }
+
+        .question-nav-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 35px;
+            height: 35px;
+            border: 1px solid #adb5bd;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: normal;
+            background-color: #ffffff;
+            color: #495057;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            position: relative;
+            font-size: 0.9em;
+        }
+
+        .question-nav-item:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Status Colors */
+        .question-nav-item.status-default { background-color: #ffffff; color: #495057; border-color: #adb5bd;} /* White */
+        .question-nav-item.status-answered { background-color: #28a745; color: white; border-color: #218838; } /* Green */
+        .question-nav-item.status-unanswered { background-color: #dc3545; color: white; border-color: #c82333; } /* Red */
+        .question-nav-item.status-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple */
+        .question-nav-item.status-answered-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple + Green Dot */
+
+        /* Green dot for answered and reviewed */
+        .question-nav-item.status-answered-review::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 7px;
+            height: 7px;
+            background-color: #28a745; /* Green dot */
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+
+
+        .main-content {
+            flex-grow: 1;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            /* justify-content: space-between; REMOVED - Let content flow naturally */
+            overflow-y: auto; /* Allow scrolling for the whole main area */
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .timers {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1em;
+            font-weight: 500;
+            color: #495057;
+            flex-shrink: 0;
+        }
+
+        .timer {
+            background-color: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+        .timer.red {
+            color: #dc3545;
+            border-color: #dc3545;
+            font-weight: 600;
+        }
+
+        .question-area-wrapper { /* Wrapper for question and options */
+             /* Allow this area to take up available space before buttons */
+             flex-grow: 1;
+             margin-bottom: 20px; /* Space before buttons */
+             /* Removed overflow-y: auto; let main-content handle scrolling */
+        }
+
+        .question-text {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: #212529;
+            font-weight: 500;
+        }
+
+        /* --- NEW: Image Container Styling --- */
+        #question-image-container {
+             margin-bottom: 20px; /* Space between image and options */
+             text-align: center; /* Center the image */
+        }
+        #question-image-container img {
+             max-width: 100%; /* Make image responsive */
+             height: auto;    /* Maintain aspect ratio */
+             max-height: 300px; /* Optional: Limit max height */
+             border-radius: 4px; /* Optional: Rounded corners */
+             box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: Slight shadow */
+        }
+         /* --- END NEW --- */
+
+        .options {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .options li {
+            margin-bottom: 10px;
+        }
+
+        .options label {
+            display: block;
+            background-color: #f8f9fa;
+            border: 1px solid #ced4da;
+            padding: 12px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            font-size: 1em;
+            font-weight: normal;
+        }
+
+        .options input[type="radio"] {
+            margin-right: 10px;
+            display: none;
+        }
+
+         .options label:hover {
+             background-color: #e2e6ea;
+             border-color: #adb5bd;
+         }
+
+        .options input[type="radio"]:checked + label {
+            background-color: #cfe2ff;
+            border-color: #007bff;
+            font-weight: 500;
+            color: #0056b3;
+        }
+
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            /* margin-top: auto; REMOVED - Let it sit naturally at the bottom */
+            flex-shrink: 0; /* Prevent buttons area from shrinking */
+        }
+
+        .nav-button.prev { background-color: #ffc107; color: #212529;}
+        .nav-button.prev:hover { background-color: #e0a800; }
+        .review-button { background-color: #6f42c1; }
+        .review-button:hover { background-color: #5a32a3; }
+        .nav-button.next { background-color: #28a745; }
+        .nav-button.next:hover { background-color: #218838; }
+        .nav-button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .nav-button.submit { background-color: #dc3545; }
+        .nav-button.submit:hover { background-color: #c82333; }
+
+
+        /* Results Page Specifics */
+        .results-content {
+             width: 100%;
+             max-width: 900px;
+             margin: 0 auto;
+             padding: 20px 0;
+        }
+
+        .score-card {
+            background-color: #e6f7ff;
+            border: 1px solid #007bff;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+        }
+        .score-card h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #0056b3;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        .score-card p {
+            font-size: 1.2em;
+            font-weight: 500;
+            color: #343a40;
+            margin: 5px 0;
+        }
+
+        .results-section {
+            margin-bottom: 25px;
+            text-align: left;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        .results-section h3 {
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .result-item {
+            border-bottom: 1px dashed #ced4da;
+            padding: 12px 0;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-item p {
+            margin: 4px 0;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+        .result-item .question { font-weight: 600; color: #343a40; }
+        .result-item .your-answer { color: #dc3545; font-weight: 500;}
+        .result-item .correct-answer { color: #28a745; font-weight: 500;}
+        .result-item .explanation { font-style: normal; color: #6c757d; margin-top: 8px; font-size: 0.95em;}
+
+        .time-analysis {
+             padding: 15px;
+             background-color: #f8f9fa;
+             border: 1px solid #dee2e6;
+             border-radius: 5px;
+             margin-bottom: 20px;
+        }
+        .time-analysis h3 {
+             color: #495057;
+             border-bottom: 1px solid #dee2e6;
+             padding-bottom: 8px;
+             margin-bottom: 15px;
+             text-align: left;
+             font-size: 1.2em;
+             font-weight: 600;
+        }
+        #timeChart {
+            max-height: 350px;
+            width: 100% !important;
+        }
+
+        /* Hide elements */
+        .hidden {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Landing Page -->
+    <div id="landing-page" class="landing-container">
+        <h1>Welcome Rika!</h1>
+        <input type="text" id="name-input" placeholder="You can change the name here">
+        <br>
+        <button id="start-quiz-button" class="start-button">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Page -->
+    <div id="quiz-page" class="quiz-container hidden">
+        <div class="quiz-header">
+            <h1>Diversity in Living World</h1>
+            <div class="user-info">
+                <span>Name: <span id="user-name"></span></span> |
+                <span>Total Time Left: <span id="total-timer">05:00</span></span>
+            </div>
+        </div>
+        <div class="quiz-body">
+            <div class="question-nav">
+                <h3>Question Palette</h3>
+                <ul id="question-nav-list" class="question-nav-list">
+                    <!-- Question numbers will be dynamically added here -->
+                </ul>
+            </div>
+            <div class="main-content">
+                <!-- Top content wrapper -->
+                <div class="timers">
+                    <span id="current-question-number">Question X of Y</span>
+                    <span class="timer" id="question-timer">Time: 0s</span>
+                </div>
+                <!-- Scrollable question area -->
+                <div class="question-area-wrapper">
+                    <p id="question-text" class="question-text">Question text goes here...</p>
+                    <!-- === NEW: Image container === -->
+                    <div id="question-image-container"></div>
+                    <!-- === END NEW === -->
+                    <ul id="options-list" class="options">
+                        <!-- Options will be dynamically added here -->
+                    </ul>
+                </div>
+                 <!-- Navigation buttons at the bottom -->
+                <div class="navigation-buttons">
+                    <button id="prev-button" class="nav-button prev">Previous</button>
+                    <button id="review-button" class="review-button">Mark for Review</button>
+                    <button id="next-button" class="nav-button next">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Page -->
+    <div id="results-page" class="results-container hidden">
+       <div class="results-content">
+            <h1>Quiz Results</h1>
+            <div id="score-card" class="score-card">
+                <h2>Score</h2>
+                <p><span id="score">0</span> / <span id="total-marks">0</span></p>
+                 <p>Well done, <span id="result-user-name">User</span>!</p>
+            </div>
+
+            <div id="wrong-unanswered-list" class="results-section">
+                <h3>Review Incorrect & Unanswered Questions</h3>
+                <!-- Incorrect/Unanswered questions will be added here -->
+            </div>
+
+            <div class="time-analysis">
+                 <h3>Time Analysis Per Question</h3>
+                <canvas id="timeChart"></canvas>
+            </div>
+             <button onclick="window.location.reload();" class="start-button">Restart Quiz</button>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+    {
+        question: "The term \"Biology\" was coined by:",
+        options: ["Lamarck and Treviranus", "Aristotle and Theophrastus", "Robert Hooke and Leeuwenhoek", "Darwin and Wallace"],
+        answer: "Lamarck and Treviranus",
+        explanation: "The term \"Biology\" was coined by Lamarck and Treviranus."
+    },
+    {
+        question: "In which year was the term \"Biology\" coined by Lamarck and Treviranus?",
+        options: ["1802", "1758", "1859", "1901"],
+        answer: "1802",
+        explanation: "Lamarck and Treviranus coined the term \"Biology\" in 1802."
+    },
+    {
+        question: "Biology is defined in the text as the study of:",
+        options: ["Different aspects of living beings", "Non-living matter", "Chemical elements", "Earth's history"],
+        answer: "Different aspects of living beings",
+        explanation: "Biology is defined as the study of different aspects of living beings."
+    },
+    {
+        question: "Which of the following is listed as one of the three main general branches of Biology?",
+        options: ["Zoology", "Genetics", "Ecology", "Physiology"],
+        answer: "Zoology",
+        explanation: "Zoology is listed as one of the three main general branches of Biology."
+    },
+    {
+        question: "Botany is a main general branch of Biology that studies:",
+        options: ["Plants", "Animals", "Fungi", "Bacteria"],
+        answer: "Plants",
+        explanation: "Botany is the main general branch of Biology that studies plants."
+    },
+    {
+        question: "Microbiology, as a main general branch of Biology, focuses on:",
+        options: ["Microorganisms", "Animal behavior", "Plant anatomy", "Human diseases"],
+        answer: "Microorganisms",
+        explanation: "Microbiology focuses on microorganisms."
+    },
+    {
+        question: "Aerobiology is the branch of science that studies:",
+        options: ["Airborne organisms and structures with their distribution", "The study of air pollution", "The biology of birds", "The aerodynamics of flight in animals"],
+        answer: "Airborne organisms and structures with their distribution",
+        explanation: "Aerobiology studies airborne organisms and structures with their distribution."
+    },
+    {
+        question: "What is Agriculture defined as in the text?",
+        options: ["Farming, raising crops and animal husbandry", "The study of soil composition", "The cultivation of ornamental plants", "The management of forests"],
+        answer: "Farming, raising crops and animal husbandry",
+        explanation: "Agriculture is defined as farming, raising crops and animal husbandry."
+    },
+    {
+        question: "Agroforestry is a type of land use involving:",
+        options: ["Growing crops, grasses, and multipurpose shrubs and trees to stabilise soil and obtain useful articles", "Only the cultivation of forest trees for timber", "Farming focused exclusively on animal production", "The study of agricultural pests"],
+        answer: "Growing crops, grasses, and multipurpose shrubs and trees to stabilise soil and obtain useful articles",
+        explanation: "Agroforestry involves growing crops, grasses, and multipurpose shrubs and trees to stabilise soil and obtain useful articles."
+    },
+    {
+        question: "The study of soil management and production of crops is known as:",
+        options: ["Agronomy", "Algalogy", "Anatomy", "Anthropology"],
+        answer: "Agronomy",
+        explanation: "Agronomy is the study of soil management and production of crops."
+    },
+    {
+        question: "Algalogy is the study of:",
+        options: ["Algae", "Fungi", "Ferns", "Mosses"],
+        answer: "Algae",
+        explanation: "Algalogy is the study of Algae."
+    },
+    {
+        question: "Anaesthesiology deals with:",
+        options: ["Anaesthesia (induction of inability to feel pain)", "The analysis of biological structures", "The study of animal behavior under stress", "The anatomy of the nervous system"],
+        answer: "Anaesthesia (induction of inability to feel pain)",
+        explanation: "Anaesthesiology deals with Anaesthesia (induction of inability to feel pain)."
+    },
+    {
+        question: "The study of internal structure which can be seen by the naked eye is called:",
+        options: ["Anatomy", "Histology", "Cytology", "Morphology (internal)"],
+        answer: "Anatomy",
+        explanation: "Anatomy is the study of internal structure which can be seen by the naked eye."
+    },
+    {
+        question: "Animal Husbandry is concerned with:",
+        options: ["Raising and management of domesticated animals", "The study of wild animal populations", "The ethical treatment of animals in research", "The classification of the animal kingdom"],
+        answer: "Raising and management of domesticated animals",
+        explanation: "Animal Husbandry is concerned with raising and management of domesticated animals."
+    },
+    {
+        question: "Anthropology is the study of:",
+        options: ["The origin, development and culture of present and past races of humans", "The social behavior of apes", "The anatomy of human ancestors", "The study of ancient civilizations through artifacts"],
+        answer: "The origin, development and culture of present and past races of humans",
+        explanation: "Anthropology is the study of the origin, development and culture of present and past races of humans."
+    },
+    {
+        question: "Aquaculture involves the:",
+        options: ["Rearing and management of aquatic animals", "Purification of water for drinking", "Study of aquatic plants", "Conservation of marine ecosystems"],
+        answer: "Rearing and management of aquatic animals",
+        explanation: "Aquaculture involves the rearing and management of aquatic animals."
+    },
+    {
+        question: "Bacteriology is specifically the study of:",
+        options: ["Bacteria", "Viruses", "Fungi", "Protozoa"],
+        answer: "Bacteria",
+        explanation: "Bacteriology is specifically the study of Bacteria."
+    },
+    {
+        question: "Bionics is defined as:",
+        options: ["Problem solving by human, animals and its technical application", "The study of biological energy sources", "The construction of artificial limbs", "The study of biomolecules"],
+        answer: "Problem solving by human, animals and its technical application",
+        explanation: "Bionics is defined as problem solving by human, animals and its technical application."
+    },
+    {
+        question: "The comprehensive study of plants in all their aspects is known as:",
+        options: ["Botany", "Zoology", "Microbiology", "Mycology"],
+        answer: "Botany",
+        explanation: "Botany is the comprehensive study of plants in all their aspects."
+    },
+    {
+        question: "Cell Biology is the study of:",
+        options: ["Cells in all their aspects", "Cellular respiration only", "The cell membrane exclusively", "The history of cell discovery"],
+        answer: "Cells in all their aspects",
+        explanation: "Cell Biology is the study of Cells in all their aspects."
+    },
+    {
+        question: "Taxonomy based on chemicals present in organisms is called:",
+        options: ["Chemotaxonomy", "Cytotaxonomy", "Numerical taxonomy", "Classical taxonomy"],
+        answer: "Chemotaxonomy",
+        explanation: "Taxonomy based on chemicals present in organisms is called Chemotaxonomy."
+    },
+    {
+        question: "Chorology is another term for:",
+        options: ["Biogeography", "Chronobiology", "Cartography", "Climatology"],
+        answer: "Biogeography",
+        explanation: "Chorology is another term for Biogeography."
+    },
+    {
+        question: "Cosmology is the study of the:",
+        options: ["Structure and evolution of universe", "Cosmic rays and their effects on life", "Astrological influences on organisms", "Composition of celestial bodies"],
+        answer: "Structure and evolution of universe",
+        explanation: "Cosmology is the study of the structure and evolution of the universe."
+    },
+    {
+        question: "Cryobiology deals with:",
+        options: ["Organisms, tissues, embryos, etc., cooled to low temperature", "The biology of organisms living in polar regions", "The formation of ice crystals in cells", "The study of cryogenic fuels"],
+        answer: "Organisms, tissues, embryos, etc., cooled to low temperature",
+        explanation: "Cryobiology deals with organisms, tissues, embryos, etc., cooled to low temperature."
+    },
+    {
+        question: "Cybernetics studies:",
+        options: ["Communications and control as by brain, nervous system and endocrine system", "The use of computers in biology", "The internet and its societal impact", "The creation of cyborgs"],
+        answer: "Communications and control as by brain, nervous system and endocrine system",
+        explanation: "Cybernetics studies communications and control as by the brain, nervous system and endocrine system."
+    },
+    {
+        question: "Cytology specifically focuses on:",
+        options: ["Cell structure", "Cell function and biochemistry", "The interactions between cells", "The classification of cell types"],
+        answer: "Cell structure",
+        explanation: "Cytology specifically focuses on cell structure."
+    },
+    {
+        question: "Taxonomy based on cell constituents including chromosome number and structure is known as:",
+        options: ["Cytotaxonomy", "Chemotaxonomy", "Karyology", "Molecular taxonomy"],
+        answer: "Cytotaxonomy",
+        explanation: "Taxonomy based on cell constituents including chromosome number and structure is known as Cytotaxonomy."
+    },
+    {
+        question: "Dermatology is the branch of medicine concerned with:",
+        options: ["Skin and other body coverings", "The digestive system", "The dermis layer of the skin only", "Cosmetic procedures"],
+        answer: "Skin and other body coverings",
+        explanation: "Dermatology is the branch of medicine concerned with skin and other body coverings."
+    },
+    {
+        question: "Developmental Biology studies:",
+        options: ["Changes in structure and physiology during various stages of life", "The development of evolutionary theories", "The formation of new species", "The growth of populations"],
+        answer: "Changes in structure and physiology during various stages of life",
+        explanation: "Developmental Biology studies changes in structure and physiology during various stages of life."
+    },
+    {
+        question: "Endocrinology is the study of:",
+        options: ["Endocrine glands, hormones and their effects", "The exocrine system", "The internal organs of the body", "The process of energy production in cells"],
+        answer: "Endocrine glands, hormones and their effects",
+        explanation: "Endocrinology is the study of endocrine glands, hormones and their effects."
+    },
+    {
+        question: "The study of insects is known as:",
+        options: ["Entomology", "Ichthyology", "Ornithology", "Helminthology"],
+        answer: "Entomology",
+        explanation: "The study of insects is known as Entomology."
+    },
+    {
+        question: "Enzymology is the study of:",
+        options: ["Enzymes and their functions", "The process of fermentation", "The structure of proteins in general", "The role of vitamins as coenzymes"],
+        answer: "Enzymes and their functions",
+        explanation: "Enzymology is the study of enzymes and their functions."
+    },
+    {
+        question: "Epidemiology is the study of:",
+        options: ["Distribution, causes and control measures of infectious diseases", "The structure of the epidermis", "The causes of genetic disorders", "The history of medical treatments"],
+        answer: "Distribution, causes and control measures of infectious diseases",
+        explanation: "Epidemiology is the study of distribution, causes and control measures of infectious diseases."
+    },
+    {
+        question: "Ethnobotany investigates the relationships between:",
+        options: ["Primitive humans and plants", "Modern agricultural practices and plant diversity", "The evolution of plant species", "The use of plants in biotechnology"],
+        answer: "Primitive humans and plants",
+        explanation: "Ethnobotany investigates the relationships between primitive humans and plants."
+    },
+    {
+        question: "The scientific study of animal behaviour is called:",
+        options: ["Ethology", "Ethnology", "Etiology", "Ecology"],
+        answer: "Ethology",
+        explanation: "The scientific study of animal behaviour is called Ethology."
+    },
+    {
+        question: "Etiology (Aetiology) deals with the:",
+        options: ["Life cycle of pathogen, especially on host and cause of disease", "Study of ethical issues in biology", "Origins of words and their meanings", "Study of eating habits"],
+        answer: "Life cycle of pathogen, especially on host and cause of disease",
+        explanation: "Etiology (Aetiology) deals with the life cycle of pathogen, especially on host and cause of disease."
+    },
+    {
+        question: "Eugenics is concerned with the:",
+        options: ["Improvement of race by modifying fertility of different categories of individuals", "Study of gene mutations", "Genetic counseling for hereditary diseases", "The development of superior plant varieties"],
+        answer: "Improvement of race by modifying fertility of different categories of individuals",
+        explanation: "Eugenics is concerned with the improvement of race by modifying fertility of different categories of individuals."
+    },
+    {
+        question: "The study of the origin and development of various life forms is called:",
+        options: ["Evolution", "Embryology", "Paleontology", "Genetics"],
+        answer: "Evolution",
+        explanation: "The study of the origin and development of various life forms is called Evolution."
+    },
+    {
+        question: "Floriculture is the cultivation of:",
+        options: ["Plants for their flowers", "Fruit-bearing plants", "Forest trees for timber", "Medicinal plants"],
+        answer: "Plants for their flowers",
+        explanation: "Floriculture is the cultivation of plants for their flowers."
+    },
+    {
+        question: "Forestry is the branch of science dealing with:",
+        options: ["Development and Management of forests", "The study of individual tree species", "The prevention of forest fires", "The use of wood products"],
+        answer: "Development and Management of forests",
+        explanation: "Forestry is the branch of science dealing with the development and management of forests."
+    },
+    {
+        question: "Gastroenterology studies the:",
+        options: ["Alimentary canal or stomach, intestine and their diseases", "Gaseous exchange in the lungs", "The role of gastric juices in digestion", "The impact of diet on gut microbiota"],
+        answer: "Alimentary canal or stomach, intestine and their diseases",
+        explanation: "Gastroenterology studies the alimentary canal or stomach, intestine and their diseases."
+    },
+    {
+        question: "Genecology is the study of:",
+        options: ["Genetic compositions of populations in relation to habitat or environment", "The family history or pedigree of an individual", "The ecological impact of genetically modified organisms", "The general principles of genetic inheritance"],
+        answer: "Genetic compositions of populations in relation to habitat or environment",
+        explanation: "Genecology is the study of genetic compositions of populations in relation to habitat or environment."
+    },
+    {
+        question: "The study of the development of individual/race/pedigree is known as:",
+        options: ["Geneology (genaeology)", "Genetics", "Phylogeny", "Ontogeny"],
+        answer: "Geneology (genaeology)",
+        explanation: "The study of the development of individual/race/pedigree is known as Geneology (genaeology)."
+    },
+    {
+        question: "Gene Therapy involves the:",
+        options: ["Removal and replacement of defective genes with genes of desirable traits", "Therapeutic use of genetic information for diagnosis", "Study of gene expression regulation", "Counseling for genetic disorders"],
+        answer: "Removal and replacement of defective genes with genes of desirable traits",
+        explanation: "Gene Therapy involves the removal and replacement of defective genes with genes of desirable traits."
+    },
+    {
+        question: "The manipulation of genes for developing a desired genetic constitution is called:",
+        options: ["Genetic Engineering", "Gene Therapy", "Eugenics", "Applied Genetics"],
+        answer: "Genetic Engineering",
+        explanation: "The manipulation of genes for developing a desired genetic constitution is called Genetic Engineering."
+    },
+    {
+        question: "Genetics is the study of:",
+        options: ["Heredity and variations", "Only human genes", "The process of protein synthesis", "The evolution of genetic codes"],
+        answer: "Heredity and variations",
+        explanation: "Genetics is the study of heredity and variations."
+    },
+    {
+        question: "The study of the earth is known as:",
+        options: ["Geology", "Geography", "Geophysics", "Geochemistry"],
+        answer: "Geology",
+        explanation: "The study of the earth is known as Geology."
+    },
+    {
+        question: "Gynaecology deals with:",
+        options: ["Female reproductive organs", "Hormonal disorders in women", "Pregnancy and childbirth", "Diseases of the urinary system in females"],
+        answer: "Female reproductive organs",
+        explanation: "Gynaecology deals with female reproductive organs."
+    },
+    {
+        question: "Haematology is the study of:",
+        options: ["Blood", "The heart and blood vessels", "Bone marrow", "Blood transfusions"],
+        answer: "Blood",
+        explanation: "Haematology is the study of blood."
+    },
+    {
+        question: "The study of parasitic worms is called:",
+        options: ["Helminthology", "Entomology", "Nematology", "Platyhelminthology"],
+        answer: "Helminthology",
+        explanation: "The study of parasitic worms is called Helminthology."
+    },
+    {
+        question: "Histochemistry is the study of the:",
+        options: ["Chemistry of living tissues", "History of chemical discoveries", "Chemical composition of individual cells", "Biochemical pathways in organs"],
+        answer: "Chemistry of living tissues",
+        explanation: "Histochemistry is the study of the chemistry of living tissues."
+    },
+    {
+        question: "The study of tissues is known as:",
+        options: ["Histology", "Cytology", "Anatomy", "Organology"],
+        answer: "Histology",
+        explanation: "The study of tissues is known as Histology."
+    },
+    {
+        question: "Horticulture involves the:",
+        options: ["Development and management of orchards and gardens", "Cultivation of herbaceous plants only", "Study of plant hormones", "The art of flower arrangement (floristry)"],
+        answer: "Development and management of orchards and gardens",
+        explanation: "Horticulture involves the development and management of orchards and gardens."
+    },
+    {
+        question: "Hygiene is defined in the text as:",
+        options: ["Care for keeping good health", "The science of sanitation and public health", "The study of microorganisms causing disease", "Practices to ensure food safety"],
+        answer: "Care for keeping good health",
+        explanation: "Hygiene is defined as care for keeping good health."
+    },
+    {
+        question: "Ichthyology is the study of:",
+        options: ["Fishes", "Insects", "Amphibians", "Reptiles"],
+        answer: "Fishes",
+        explanation: "Ichthyology is the study of Fishes."
+    },
+    {
+        question: "The study of immunity or resistance to disease is called:",
+        options: ["Immunology", "Pathology", "Virology", "Bacteriology"],
+        answer: "Immunology",
+        explanation: "The study of immunity or resistance to disease is called Immunology."
+    },
+    {
+        question: "Kalology is the study of:",
+        options: ["Human beauty", "Calligraphy", "The structure of calluses", "Color perception"],
+        answer: "Human beauty",
+        explanation: "Kalology is the study of Human beauty."
+    },
+    {
+        question: "Karyology is the study of the:",
+        options: ["Cell nucleus and chromosomes", "Kinetic energy in biological systems", "Cartilage tissue", "The process of keratinization"],
+        answer: "Cell nucleus and chromosomes",
+        explanation: "Karyology is the study of the cell nucleus and chromosomes."
+    },
+    {
+        question: "Kinesiology studies the:",
+        options: ["Inter-relationship of anatomy and physiology with respect to movements", "The energy of motion in cells", "The study of joint structures", "The impact of exercise on muscle growth"],
+        answer: "Inter-relationship of anatomy and physiology with respect to movements",
+        explanation: "Kinesiology studies the inter-relationship of anatomy and physiology with respect to movements."
+    },
+    {
+        question: "Lichenology is the study of:",
+        options: ["Lichens", "Liverworts", "Light and its effects on organisms", "Lipid metabolism"],
+        answer: "Lichens",
+        explanation: "Lichenology is the study of Lichens."
+    },
+    {
+        question: "Limnology is primarily the study of:",
+        options: ["Fresh water ecology", "Marine biology", "The limbs of amphibians", "The boundaries of ecosystems"],
+        answer: "Fresh water ecology",
+        explanation: "Limnology is primarily the study of fresh water ecology."
+    },
+    {
+        question: "According to the text, Limnology also includes the study of:",
+        options: ["Snails", "Saline lakes", "Aquatic insects", "River currents"],
+        answer: "Snails",
+        explanation: "According to the text, Limnology also includes the study of snails."
+    },
+    {
+        question: "Microbiology deals with organisms typically less than:",
+        options: ["0.1 mm", "1 mm", "0.01 mm", "1 cm"],
+        answer: "0.1 mm",
+        explanation: "Microbiology deals with organisms typically less than 0.1 mm."
+    },
+    {
+        question: "The study of form and structure (external or internal) is known as:",
+        options: ["Morphology", "Anatomy", "Physiology", "Histology"],
+        answer: "Morphology",
+        explanation: "The study of form and structure (external or internal) is known as Morphology."
+    },
+    {
+        question: "Mycology is the study of:",
+        options: ["Fungi", "Algae", "Mosses", "Muscles"],
+        answer: "Fungi",
+        explanation: "Mycology is the study of Fungi."
+    },
+    {
+        question: "Nematology is the study of:",
+        options: ["Roundworms (nematodes)", "Flatworms", "Segmented worms", "Nemertine worms"],
+        answer: "Roundworms (nematodes)",
+        explanation: "Nematology is the study of Roundworms (nematodes)."
+    },
+    {
+        question: "Neonatology is the study of:",
+        options: ["New born", "Neonatal diseases only", "The nervous system of infants", "The element Neon"],
+        answer: "New born",
+        explanation: "Neonatology is the study of new born."
+    },
+    {
+        question: "Nephrology is the study of:",
+        options: ["Kidneys", "The nervous system", "The neck and its structures", "Nutrient absorption"],
+        answer: "Kidneys",
+        explanation: "Nephrology is the study of Kidneys."
+    },
+    {
+        question: "Neurology is the study of the:",
+        options: ["Nervous system", "Neural networks in computers", "The neurochemistry of the brain", "The development of neurons"],
+        answer: "Nervous system",
+        explanation: "Neurology is the study of the nervous system."
+    },
+    {
+        question: "Occupational Therapy is defined as:",
+        options: ["Treating mental and physical defects with occupation", "The study of workplace ergonomics", "Therapy for recovering from job-related injuries", "Vocational guidance and counseling"],
+        answer: "Treating mental and physical defects with occupation",
+        explanation: "Occupational Therapy is defined as treating mental and physical defects with occupation."
+    },
+    {
+        question: "Olericulture is the cultivation of:",
+        options: ["Vegetables", "Ornamental shrubs", "Oil-producing plants", "Orchids"],
+        answer: "Vegetables",
+        explanation: "Olericulture is the cultivation of Vegetables."
+    },
+    {
+        question: "Oncology is the study of:",
+        options: ["Cancers and tumours", "The origin of life (abiogenesis)", "The structure and function of oncogenes", "The development of anti-cancer drugs"],
+        answer: "Cancers and tumours",
+        explanation: "Oncology is the study of cancers and tumours."
+    },
+    {
+        question: "Ophthalmology is the study of:",
+        options: ["Eyes", "The optic nerve", "Vision and perception", "Diseases of the orbit"],
+        answer: "Eyes",
+        explanation: "Ophthalmology is the study of Eyes."
+    },
+    {
+        question: "Organology is the study of:",
+        options: ["Different organs of the body", "The organization of societies", "Musical instruments called organs", "The principles of organic farming"],
+        answer: "Different organs of the body",
+        explanation: "Organology is the study of different organs of the body."
+    },
+    {
+        question: "The study of birds is called:",
+        options: ["Ornithology", "Herpetology", "Mammalogy", "Entomology"],
+        answer: "Ornithology",
+        explanation: "The study of birds is called Ornithology."
+    },
+    {
+        question: "Paediatrics deals with the health of:",
+        options: ["Children", "The elderly (geriatrics)", "The feet (podiatry)", "Pregnant women"],
+        answer: "Children",
+        explanation: "Paediatrics deals with the health of children."
+    },
+    {
+        question: "Palaeobotany is the study of:",
+        options: ["Fossil plants and their impressions", "Ancient climates through plant evidence", "The evolution of plant life", "The botany of arid regions"],
+        answer: "Fossil plants and their impressions",
+        explanation: "Palaeobotany is the study of fossil plants and their impressions."
+    },
+    {
+        question: "Parasitology is the study of:",
+        options: ["Parasites", "The host-parasite relationship", "Diseases caused by parasites", "The evolution of parasitism"],
+        answer: "Parasites",
+        explanation: "Parasitology is the study of parasites."
+    },
+    {
+        question: "Parazoology is specifically the study of:",
+        options: ["Sponges", "Protozoans that are animal-like", "Extinct primitive animals", "Parasitic animals"],
+        answer: "Sponges",
+        explanation: "Parazoology is specifically the study of sponges."
+    },
+    {
+        question: "Pedology/Paedology is also known as:",
+        options: ["Edaphology", "The study of child development", "The study of fossilized footprints", "Soil conservation"],
+        answer: "Edaphology",
+        explanation: "Pedology/Paedology is also known as Edaphology (the study of soil in relation to living things, especially plants)."
+    },
+    {
+        question: "Pharmacology is the study of:",
+        options: ["Synthesis and effects of medicines on organisms", "The operation of pharmacies", "The cultivation of medicinal plants", "The physiological effects of drugs"],
+        answer: "Synthesis and effects of medicines on organisms",
+        explanation: "Pharmacology is the study of synthesis and effects of medicines on organisms."
+    },
+    {
+        question: "Photobiology studies the:",
+        options: ["Effect of light on various biological processes", "The physics of light", "The chemistry of photosynthesis", "The structure of photoreceptor cells"],
+        answer: "Effect of light on various biological processes",
+        explanation: "Photobiology studies the effect of light on various biological processes."
+    },
+    {
+        question: "Phycology is another term for the study of:",
+        options: ["Algae", "Fungi", "Ferns", "Physical phenomena in biology"],
+        answer: "Algae",
+        explanation: "Phycology is another term for the study of Algae."
+    },
+    {
+        question: "Physiology is the study of:",
+        options: ["Body functions", "Physical therapy techniques", "The physical structure of the body (anatomy)", "The physics underlying biological processes"],
+        answer: "Body functions",
+        explanation: "Physiology is the study of body functions."
+    },
+    {
+        question: "Physiotherapy is the treatment of body defects through:",
+        options: ["Massage and exercise", "Pharmaceutical drugs", "Surgical intervention", "Psychological counseling"],
+        answer: "Massage and exercise",
+        explanation: "Physiotherapy is the treatment of body defects through massage and exercise."
+    },
+    {
+        question: "Pisciculture involves the:",
+        options: ["Rearing, catching and management of fishes", "Study of fish diseases", "Conservation of fish habitats", "The taxonomy of fishes"],
+        answer: "Rearing, catching and management of fishes",
+        explanation: "Pisciculture involves the rearing, catching and management of fishes."
+    },
+    {
+        question: "The study of flatworms or platyhelminthes is called:",
+        options: ["Platyhelminthology", "Nematology", "Annelidology", "Helminthology"],
+        answer: "Platyhelminthology",
+        explanation: "The study of flatworms or platyhelminthes is called Platyhelminthology."
+    },
+    {
+        question: "Pomology is the study of:",
+        options: ["Fruits and fruit yielding plants", "Pollen grains", "The cultivation of apples (pomes)", "The poetry of nature"],
+        answer: "Fruits and fruit yielding plants",
+        explanation: "Pomology is the study of fruits and fruit yielding plants."
+    },
+    {
+        question: "Radiology uses X-rays and other imaging techniques for:",
+        options: ["Medical diagnosis", "The study of radioactive elements", "The treatment of cancer (radiotherapy)", "Communication using radio waves"],
+        answer: "Medical diagnosis",
+        explanation: "Radiology uses X-rays and other imaging techniques for medical diagnosis."
+    },
+    {
+        question: "Radiotherapy is the treatment of disease with:",
+        options: ["X-rays and radioactive substances", "Radio frequency ablation", "Sound waves (ultrasound therapy)", "Light (phototherapy)"],
+        answer: "X-rays and radioactive substances",
+        explanation: "Radiotherapy is the treatment of disease with X-rays and radioactive substances."
+    },
+    {
+        question: "Sericulture is the rearing of:",
+        options: ["Silkworms for extraction of silk", "Bees for honey", "Lac insects for lac", "Shrimp in aquaculture"],
+        answer: "Silkworms for extraction of silk",
+        explanation: "Sericulture is the rearing of silkworms for extraction of silk."
+    },
+    {
+        question: "Silviculture (Sylviculture) is the cultivation of:",
+        options: ["Forest trees", "Silver-bearing plants", "Plants in silicon-rich environments", "Ornamental grasses"],
+        answer: "Forest trees",
+        explanation: "Silviculture (Sylviculture) is the cultivation of forest trees."
+    },
+    {
+        question: "Speciation is the study of the:",
+        options: ["Formation of new and distinct species", "Special adaptations of organisms", "Classification of species", "Genetic differences between species"],
+        answer: "Formation of new and distinct species",
+        explanation: "Speciation is the study of the formation of new and distinct species."
+    },
+    {
+        question: "Systematics is also known as:",
+        options: ["Biosystematics", "Taxonomy only", "Nomenclature only", "Phylogenetics"],
+        answer: "Biosystematics",
+        explanation: "Systematics is also known as Biosystematics."
+    },
+    {
+        question: "Taxonomy involves the:",
+        options: ["Classification, nomenclature and identification of organisms", "Study of taxidermy", "Assessment of taxes on biological products", "Analysis of toxic substances in organisms"],
+        answer: "Classification, nomenclature and identification of organisms",
+        explanation: "Taxonomy involves the classification, nomenclature and identification of organisms."
+    },
+    {
+        question: "Therapeutics is the branch of medicine concerned with the:",
+        options: ["Treatment of disease", "Study of therapeutic drugs", "The process of healing", "The development of new medical therapies"],
+        answer: "Treatment of disease",
+        explanation: "Therapeutics is the branch of medicine concerned with the treatment of disease."
+    },
+    {
+        question: "Toxicology is the study of:",
+        options: ["Harmful effects of drug and other substances", "The classification of toxins", "The methods of detoxification", "The study of venomous animals"],
+        answer: "Harmful effects of drug and other substances",
+        explanation: "Toxicology is the study of harmful effects of drug and other substances."
+    },
+    {
+        question: "Urology deals with the structure, action, functions and disorders of the:",
+        options: ["Urinary tract (urinogenital tract in males)", "Uterus and ovaries", "Urban ecology", "The nervous system's control over urination"],
+        answer: "Urinary tract (urinogenital tract in males)",
+        explanation: "Urology deals with the structure, action, functions and disorders of the urinary tract (urinogenital tract in males)."
+    },
+    {
+        question: "Venereology is the study of:",
+        options: ["Venereal diseases", "The venous system of the body", "The planet Venus and its potential for life", "Poisons and venoms"],
+        answer: "Venereal diseases",
+        explanation: "Venereology is the study of venereal diseases."
+    },
+    {
+        question: "Virology is the study of:",
+        options: ["Viruses", "Viroids and prions", "Viral diseases", "The structure of viral capsids"],
+        answer: "Viruses",
+        explanation: "Virology is the study of Viruses."
+    },
+    {
+        question: "The study of the geographical distribution of animals is called:",
+        options: ["Zoogeography", "Biogeography", "Animal ecology", "Paleozoology"],
+        answer: "Zoogeography",
+        explanation: "The study of the geographical distribution of animals is called Zoogeography."
+    },
+    {
+        question: "Zoology is the broad study of:",
+        options: ["Animals in their various aspects", "Only animals kept in zoos", "The classification of animal species", "Animal anatomy and physiology"],
+        answer: "Animals in their various aspects",
+        explanation: "Zoology is the broad study of animals in their various aspects."
+    },
+    {
+        question: "Zootaxy specifically refers to the:",
+        options: ["Classification of animals", "The study of animal movement", "The arrangement of exhibits in a zoo", "The study of toxins produced by animals"],
+        answer: "Classification of animals",
+        explanation: "Zootaxy specifically refers to the classification of animals."
+    },
+    {
+        question: "Zymology is the study of:",
+        options: ["Fermentation process", "The enzymes involved in fermentation", "The classification of yeasts", "The history of wine and beer making"],
+        answer: "Fermentation process",
+        explanation: "Zymology is the study of fermentation process."
+    },
+    {
+        question: "Who is considered the Father of Medicine?",
+        options: ["Hippocrates", "Aristotle", "Galen", "Vesalius"],
+        answer: "Hippocrates",
+        explanation: "Hippocrates is considered the Father of Medicine."
+    },
+    {
+        question: "Aristotle is recognized as the Father of which combination of fields?",
+        options: ["Biology, Embryology, and Zoology", "Botany, Ecology, and Physiology", "Anatomy, Microscopy, and Cytology", "Medicine, Pharmacology, and Surgery"],
+        answer: "Biology, Embryology, and Zoology",
+        explanation: "Aristotle is recognized as the Father of Biology, Embryology, and Zoology."
+    },
+    {
+        question: "Theophrastus is known as the Father of:",
+        options: ["Botany and Ecology", "Zoology and Embryology", "Mycology and Bryology", "Taxonomy and Nomenclature"],
+        answer: "Botany and Ecology",
+        explanation: "Theophrastus is known as the Father of Botany and Ecology."
+    },
+    {
+        question: "Andreas Vesalius is called the Father of:",
+        options: ["Anatomy", "Physiology", "Surgery", "Histology"],
+        answer: "Anatomy",
+        explanation: "Andreas Vesalius is called the Father of Anatomy."
+    },
+    {
+        question: "N. Grew is recognized as the Father of:",
+        options: ["Plant Anatomy", "Animal Histology", "Microscopy", "Plant Physiology"],
+        answer: "Plant Anatomy",
+        explanation: "N. Grew is recognized as the Father of Plant Anatomy."
+    },
+    {
+        question: "Antony van Leeuwenhoek is considered the Father of:",
+        options: ["Microscopy (Protozoology) and Microbiology (Bacteriology)", "Cytology and Cell Theory", "Genetics and Heredity", "Immunology and Vaccination"],
+        answer: "Microscopy (Protozoology) and Microbiology (Bacteriology)",
+        explanation: "Antony van Leeuwenhoek is considered the Father of Microscopy (Protozoology) and Microbiology (Bacteriology)."
+    },
+    {
+        question: "Robert Hooke is known as the Father of:",
+        options: ["Cytology", "Genetics", "Taxonomy", "Embryology"],
+        answer: "Cytology",
+        explanation: "Robert Hooke is known as the Father of Cytology."
+    },
+    {
+        question: "The Father of Taxonomy and Nomenclature is:",
+        options: ["Carolus (Carl von) Linnaeus", "Charles Darwin", "Gregor Mendel", "Jean-Baptiste Lamarck"],
+        answer: "Carolus (Carl von) Linnaeus",
+        explanation: "Carolus (Carl von) Linnaeus is the Father of Taxonomy and Nomenclature."
+    },
+    {
+        question: "C.F. Wolff is considered the Father of:",
+        options: ["Embryology", "Histology", "Teratology", "Developmental Biology"],
+        answer: "Embryology",
+        explanation: "C.F. Wolff is considered the Father of Embryology."
+    },
+    {
+        question: "Who is known as the Father of Immunology?",
+        options: ["Edward Jenner", "Louis Pasteur", "Robert Koch", "Elie Metchnikoff"],
+        answer: "Edward Jenner",
+        explanation: "Edward Jenner is known as the Father of Immunology."
+    },
+    {
+        question: "Liebig is recognized as the Father of:",
+        options: ["Biochemistry", "Organic Chemistry", "Agricultural Chemistry", "Nutritional Science"],
+        answer: "Biochemistry",
+        explanation: "Liebig is recognized as the Father of Biochemistry."
+    },
+    {
+        question: "Stephen Hales is known as the Father of:",
+        options: ["Plant Physiology", "Animal Physiology", "Hydraulics", "Pneumatics"],
+        answer: "Plant Physiology",
+        explanation: "Stephen Hales is known as the Father of Plant Physiology."
+    },
+    {
+        question: "Micheli is regarded as the Father of:",
+        options: ["Mycology", "Bryology", "Phycology", "Lichenology"],
+        answer: "Mycology",
+        explanation: "Micheli is regarded as the Father of Mycology."
+    },
+    {
+        question: "Hedwig is considered the Father of:",
+        options: ["Bryology", "Pteridology", "Mycology", "Lichenology"],
+        answer: "Bryology",
+        explanation: "Hedwig is considered the Father of Bryology."
+    },
+    {
+        question: "Platter is known as the Father of:",
+        options: ["Parasitology", "Psychiatry", "Forensic Medicine", "Epidemiology"],
+        answer: "Parasitology",
+        explanation: "Platter is known as the Father of Parasitology."
+    },
+    {
+        question: "Who is recognized as the Father of Antiseptic Surgery?",
+        options: ["Joseph Lister", "Ignaz Semmelweis", "Louis Pasteur", "Robert Koch"],
+        answer: "Joseph Lister",
+        explanation: "Joseph Lister is recognized as the Father of Antiseptic Surgery."
+    },
+    {
+        question: "Koch is renowned as the Father of (modern):",
+        options: ["Bacteriology", "Virology", "Epidemiology", "Public Health"],
+        answer: "Bacteriology",
+        explanation: "Koch is renowned as the Father of (modern) Bacteriology."
+    },
+    {
+        question: "Pasteur is considered a founding Father of:",
+        options: ["Microbiology", "Genetics", "Molecular Biology", "Biochemistry"],
+        answer: "Microbiology",
+        explanation: "Pasteur is considered a founding Father of Microbiology."
+    },
+    {
+        question: "Erdtman is known as the Father of:",
+        options: ["Palynology", "Paleobotany", "Aerobiology", "Plant Geography"],
+        answer: "Palynology",
+        explanation: "Erdtman is known as the Father of Palynology."
+    },
+    {
+        question: "Thomas Addison is regarded as the Father of:",
+        options: ["Endocrinology", "Nephrology", "Dermatology", "Haematology"],
+        answer: "Endocrinology",
+        explanation: "Thomas Addison is regarded as the Father of Endocrinology."
+    },
+    {
+        question: "Leonardo da Vinci is listed in the text as the Father of:",
+        options: ["Palaeontology", "Anatomy through art", "Engineering and Invention", "Renaissance Art"],
+        answer: "Palaeontology",
+        explanation: "Leonardo da Vinci is listed in the text as the Father of Palaeontology."
+    },
+    {
+        question: "Who is known as the Father of Antibiotics?",
+        options: ["Alexander Fleming", "Selman Waksman", "Howard Florey", "Ernst Chain"],
+        answer: "Alexander Fleming",
+        explanation: "Alexander Fleming is known as the Father of Antibiotics."
+    },
+    {
+        question: "William Harvey is famous as the Father of the understanding of:",
+        options: ["Blood circulation", "Respiration", "Digestion", "Nerve function"],
+        answer: "Blood circulation",
+        explanation: "William Harvey is famous as the Father of the understanding of blood circulation."
+    },
+    {
+        question: "Landsteiner is recognized as the Father of:",
+        options: ["Blood Groups", "Immunology", "Genetics", "Virology"],
+        answer: "Blood Groups",
+        explanation: "Landsteiner is recognized as the Father of Blood Groups."
+    },
+    {
+        question: "Who is known as the Father of the Green Revolution?",
+        options: ["Norman E. Borlaug", "M.S. Swaminathan", "Fritz Haber", "Carl Bosch"],
+        answer: "Norman E. Borlaug",
+        explanation: "Norman E. Borlaug is known as the Father of the Green Revolution."
+    },
+    {
+        question: "M.S. Swaminathan is known as the Father of the:",
+        options: ["Indian Green Revolution", "Global Food Security", "Sustainable Agriculture", "Plant Genetics in India"],
+        answer: "Indian Green Revolution",
+        explanation: "M.S. Swaminathan is known as the Father of the Indian Green Revolution."
+    },
+    {
+        question: "\"The Birdman of India\" refers to:",
+        options: ["Salim Ali", "R. Mishra", "J.C. Bose", "Birbal Sahni"],
+        answer: "Salim Ali",
+        explanation: "\"The Birdman of India\" refers to Salim Ali."
+    },
+    {
+        question: "Birbal Sahni is renowned as the Father of:",
+        options: ["Indian Palaeobotany", "Indian Bryology", "Indian Geology", "Indian Archaeology"],
+        answer: "Indian Palaeobotany",
+        explanation: "Birbal Sahni is renowned as the Father of Indian Palaeobotany."
+    },
+    {
+        question: "Muller is known as the Father of:",
+        options: ["Radiation Biology", "Mutation Breeding", "Drosophila Genetics", "X-ray Crystallography"],
+        answer: "Radiation Biology",
+        explanation: "Muller is known as the Father of Radiation Biology."
+    },
+    {
+        question: "Gregor Johann Mendel is universally recognized as the Father of:",
+        options: ["Genetics", "Evolution by Natural Selection", "Cell Theory", "Modern Botany"],
+        answer: "Genetics",
+        explanation: "Gregor Johann Mendel is universally recognized as the Father of Genetics."
+    },
+    {
+        question: "Francis Galton is known as the Father of:",
+        options: ["Eugenics", "Statistics in Biology", "Fingerprinting", "Differential Psychology"],
+        answer: "Eugenics",
+        explanation: "Francis Galton is known as the Father of Eugenics."
+    },
+    {
+        question: "Archibald Garrod is considered the Father of:",
+        options: ["Biochemical/Human Genetics", "Inborn Errors of Metabolism", "Clinical Chemistry", "Medical Genetics"],
+        answer: "Biochemical/Human Genetics",
+        explanation: "Archibald Garrod is considered the Father of Biochemical/Human Genetics."
+    },
+    {
+        question: "T. H. Morgan is known as the Father of:",
+        options: ["Experimental Genetics", "Population Genetics", "Human Genetics", "Bacterial Genetics"],
+        answer: "Experimental Genetics",
+        explanation: "T. H. Morgan is known as the Father of Experimental Genetics."
+    },
+    {
+        question: "Paul Berg is recognized as a pioneer and often called the Father of:",
+        options: ["Genetic Engineering", "DNA Sequencing", "PCR Technology", "Bioinformatics"],
+        answer: "Genetic Engineering",
+        explanation: "Paul Berg is recognized as a pioneer and often called the Father of Genetic Engineering."
+    },
+    {
+        question: "A.K. Sharma is a famous Indian biologist known for his work in:",
+        options: ["Cytology", "Plant Breeding", "Ecology", "Mycology"],
+        answer: "Cytology",
+        explanation: "A.K. Sharma is a famous Indian biologist known for his work in Cytology."
+    },
+    {
+        question: "B.B. Mundkur is associated with which field of biology in India?",
+        options: ["Plant Pathology", "Palynology", "Phycology", "Embryology"],
+        answer: "Plant Pathology",
+        explanation: "B.B. Mundkur is associated with the field of Plant Pathology in India."
+    },
+    {
+        question: "B.K. Nair contributed significantly to the Indian field of:",
+        options: ["Palynology", "Xylotomy", "Ornithology", "In vitro Fertilization"],
+        answer: "Palynology",
+        explanation: "B.K. Nair contributed significantly to the Indian field of Palynology."
+    },
+    {
+        question: "B.P. Pal is a renowned Indian scientist in the field of:",
+        options: ["Plant Breeding", "Palaeobotany", "Cytogenetics", "Taxonomy"],
+        answer: "Plant Breeding",
+        explanation: "B.P. Pal is a renowned Indian scientist in the field of Plant Breeding."
+    },
+    {
+        question: "H. Santapau is known for his work in Indian:",
+        options: ["Taxonomy", "Plant Physiology", "Morphology", "Ecology"],
+        answer: "Taxonomy",
+        explanation: "H. Santapau is known for his work in Indian Taxonomy."
+    },
+    {
+        question: "Indira Hinduja is a famous Indian biologist associated with pioneering work in:",
+        options: ["In vitro Fertilization", "DNA Fingerprinting", "Gene Therapy", "Stem Cell Research"],
+        answer: "In vitro Fertilization",
+        explanation: "Indira Hinduja is a famous Indian biologist associated with pioneering work in In vitro Fertilization."
+    },
+    {
+        question: "J.C. Bose made significant contributions to:",
+        options: ["Plant Physiology", "Radio Science", "Biophysics", "All of the above"],
+        answer: "Plant Physiology",
+        explanation: "J.C. Bose made significant contributions to Plant Physiology."
+    },
+    {
+        question: "J.J. Chinoy is known for his work in Indian:",
+        options: ["Plant Physiology", "Mycology", "Pteridology", "Plant Pathology"],
+        answer: "Plant Physiology",
+        explanation: "J.J. Chinoy is known for his work in Indian Plant Physiology."
+    },
+    {
+        question: "K.A. Chaudhari is associated with which specialized field of botany?",
+        options: ["Xylotomy", "Dendrochronology", "Pomology", "Olericulture"],
+        answer: "Xylotomy",
+        explanation: "K.A. Chaudhari is associated with the specialized field of Xylotomy."
+    },
+    {
+        question: "K.C. Mehta made notable contributions to Indian:",
+        options: ["Plant Pathology", "Algology", "Bryology", "Lichenology"],
+        answer: "Plant Pathology",
+        explanation: "K.C. Mehta made notable contributions to Indian Plant Pathology."
+    },
+    {
+        question: "Lalji Singh is famous in India for his pioneering work in:",
+        options: ["DNA Finger Printing", "Human Genome Project (India)", "Wildlife Genetics", "All of the above"],
+        answer: "DNA Finger Printing",
+        explanation: "Lalji Singh is famous in India for his pioneering work in DNA Finger Printing."
+    },
+    {
+        question: "M.S. Swaminathan, besides the Green Revolution, is also known for work in:",
+        options: ["Cytogenetics", "Agricultural Policy", "Food Security", "Sustainable Development"],
+        answer: "Cytogenetics",
+        explanation: "M.S. Swaminathan, besides the Green Revolution, is also known for work in Cytogenetics."
+    },
+    {
+        question: "O.P. Iyengar is recognized as the Father of Indian:",
+        options: ["Phycology (Algology)", "Mycology", "Bacteriology", "Virology"],
+        answer: "Phycology (Algology)",
+        explanation: "O.P. Iyengar is recognized as the Father of Indian Phycology (Algology)."
+    },
+    {
+        question: "P. Maheshwari is known as the Father of Indian:",
+        options: ["Embryology", "Plant Anatomy", "Plant Tissue Culture", "Floral Biology"],
+        answer: "Embryology",
+        explanation: "P. Maheshwari is known as the Father of Indian Embryology."
+    },
+    {
+        question: "P.N. Mehra contributed significantly to the field of:",
+        options: ["Pteridology", "Gymnosperm Morphology", "Cytogenetics of woody plants", "All of the above"],
+        answer: "Pteridology",
+        explanation: "P.N. Mehra contributed significantly to the field of Pteridology."
+    },
+    {
+        question: "Prof. Salim Ali is renowned in India for his work in:",
+        options: ["Ornithology", "Entomology", "Mammalogy", "Ichthyology"],
+        answer: "Ornithology",
+        explanation: "Prof. Salim Ali is renowned in India for his work in Ornithology."
+    },
+    {
+        question: "As per the provided text, R. Mishra is listed for contributions in:",
+        options: ["Ornithology", "Ecology", "Cytogenetics", "Mycology"],
+        answer: "Ornithology",
+        explanation: "As per the provided text, R. Mishra is listed for contributions in Ornithology."
+    },
+    {
+        question: "As per the provided text, R.P. Roy is listed for contributions in:",
+        options: ["Ecology", "Cytogenetics", "Tissue Culture", "Plant Breeding"],
+        answer: "Ecology",
+        explanation: "As per the provided text, R.P. Roy is listed for contributions in Ecology."
+    },
+    {
+        question: "According to the text, S.R. Kashyap is associated with which fields in India?",
+        options: ["Cytogenetics, Tissue Culture and Plant Breeding", "Bryology and Hepatology", "Pteridology and Gymnosperms", "Phycology and Mycology"],
+        answer: "Cytogenetics, Tissue Culture and Plant Breeding",
+        explanation: "According to the text, S.R. Kashyap is associated with Cytogenetics, Tissue Culture and Plant Breeding in India."
+    },
+    {
+        question: "T.S. Sadasivan is a famous Indian biologist known for his work in:",
+        options: ["Mycology", "Plant Physiology (Soil-Plant Relationships)", "Plant Pathology (Fungal diseases)", "All of the above"],
+        answer: "Mycology",
+        explanation: "T.S. Sadasivan is a famous Indian biologist known for his work in Mycology."
+    },
+    {
+        question: "V. Puri made significant contributions to the field of:",
+        options: ["Morphology", "Floral Anatomy", "Plant Anatomy", "All of the above"],
+        answer: "Morphology",
+        explanation: "V. Puri made significant contributions to the field of Morphology."
+    },
+    {
+        question: "According to the excerpt, has \"life\" been defined absolutely satisfactorily so far?",
+        options: ["No", "Yes", "Only for animals", "Only for plants"],
+        answer: "No",
+        explanation: "According to the excerpt, \"life\" has not been defined absolutely satisfactorily so far."
+    },
+    {
+        question: "The excerpt describes \"life\" as a state of an animal or a plant in which:",
+        options: ["Its organs are capable of performing their functions, or such performance has not permanently ceased.", "It is capable of reproduction.", "It can respond to external stimuli.", "It undergoes growth and development."],
+        answer: "Its organs are capable of performing their functions, or such performance has not permanently ceased.",
+        explanation: "The excerpt describes \"life\" as a state of an animal or a plant in which its organs are capable of performing their functions, or such performance has not permanently ceased."
+    }
+];
+    
+
+        // --- State Variables ---
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(quizData.length).fill(null);
+        let questionStatus = new Array(quizData.length).fill('default');
+        let markedForReview = new Array(quizData.length).fill(false);
+        let timeSpentPerQuestion = new Array(quizData.length).fill(0);
+        let questionTimerInterval;
+        let totalTimerInterval;
+        let questionViewStartTime = null;
+        let totalTimeSeconds = 50 * 60;
+        let userName = "";
+        let timeChart = null;
+        const QUESTION_TIME_LIMIT = 50;
+
+        // --- DOM Elements ---
+        const landingPage = document.getElementById('landing-page');
+        const quizPage = document.getElementById('quiz-page');
+        const resultsPage = document.getElementById('results-page');
+        const nameInput = document.getElementById('name-input');
+        const startQuizButton = document.getElementById('start-quiz-button');
+        const userNameDisplay = document.getElementById('user-name');
+        const resultUserNameDisplay = document.getElementById('result-user-name');
+        const totalTimerDisplay = document.getElementById('total-timer');
+        const questionNavList = document.getElementById('question-nav-list');
+        const currentQuestionNumberDisplay = document.getElementById('current-question-number');
+        const questionTimerDisplay = document.getElementById('question-timer');
+        const questionText = document.getElementById('question-text');
+        const optionsList = document.getElementById('options-list');
+        const prevButton = document.getElementById('prev-button');
+        const reviewButton = document.getElementById('review-button');
+        const nextButton = document.getElementById('next-button');
+        const scoreDisplay = document.getElementById('score');
+        const totalMarksDisplay = document.getElementById('total-marks');
+        const wrongUnansweredList = document.getElementById('wrong-unanswered-list');
+        const timeChartCanvas = document.getElementById('timeChart');
+        const imageContainer = document.getElementById('question-image-container'); // <-- Get image container
+
+        // --- Functions ---
+
+        function showPage(pageId) {
+            landingPage.classList.add('hidden');
+            quizPage.classList.add('hidden');
+            resultsPage.classList.add('hidden');
+            const pageToShow = document.getElementById(pageId);
+            if (pageToShow) {
+                pageToShow.classList.remove('hidden');
+            }
+        }
+
+        function startQuiz() {
+            userName = nameInput.value.trim() || "Rika xaxa";
+            userNameDisplay.textContent = userName;
+            resultUserNameDisplay.textContent = userName;
+            showPage('quiz-page');
+
+            totalMarksDisplay.textContent = quizData.length;
+            initializeQuestionNav();
+            loadQuestion(currentQuestionIndex);
+            startTotalTimer();
+        }
+
+        function initializeQuestionNav() {
+            questionNavList.innerHTML = '';
+            quizData.forEach((_, index) => {
+                const li = document.createElement('li');
+                li.textContent = index + 1;
+                li.classList.add('question-nav-item', `status-${questionStatus[index]}`);
+                li.dataset.index = index;
+                li.addEventListener('click', () => navigateToQuestion(index));
+                questionNavList.appendChild(li);
+            });
+             updateQuestionNavHighlight();
+        }
+
+        function updateQuestionNavHighlight() {
+             const items = questionNavList.querySelectorAll('.question-nav-item');
+             items.forEach((item, index) => {
+                 item.style.borderColor = '';
+                 item.style.borderWidth = '';
+                 if (index === currentQuestionIndex) {
+                     item.style.borderColor = '#007bff';
+                     item.style.borderWidth = '2px';
+                 }
+             });
+        }
+
+
+        function updateSingleQuestionNavStatus(index) {
+            const item = questionNavList.querySelector(`.question-nav-item[data-index="${index}"]`);
+            if (item) {
+                item.classList.remove('status-default', 'status-answered', 'status-unanswered', 'status-review', 'status-answered-review');
+                item.classList.add(`status-${questionStatus[index]}`);
+            }
+        }
+
+        function recordTimeSpent() {
+            if (questionViewStartTime !== null) {
+                const timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                if (timeElapsedThisVisit > 0) {
+                    timeSpentPerQuestion[currentQuestionIndex] += timeElapsedThisVisit;
+                }
+                questionViewStartTime = null;
+            }
+        }
+
+        function updateStatus(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let currentStatus = questionStatus[index];
+            let newStatus = currentStatus;
+
+            if (answered && reviewed) {
+                newStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                newStatus = 'answered';
+            } else if (!answered && reviewed) {
+                newStatus = 'review';
+            } else if (!answered && !reviewed) {
+                if (currentStatus === 'unanswered') {
+                    newStatus = 'unanswered';
+                } else if (currentStatus === 'default') {
+                     newStatus = 'default';
+                } else {
+                    newStatus = 'unanswered';
+                }
+            }
+
+            if (newStatus !== currentStatus) {
+                questionStatus[index] = newStatus;
+                updateSingleQuestionNavStatus(index);
+            }
+        }
+
+        function finalizeStatusOnLeave(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let finalStatus = questionStatus[index];
+
+            if (!answered && !reviewed) {
+                finalStatus = 'unanswered';
+            } else if (answered && reviewed) {
+                finalStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                finalStatus = 'answered';
+            } else if (!answered && reviewed) {
+                finalStatus = 'review';
+            }
+
+            if (finalStatus !== questionStatus[index]) {
+                questionStatus[index] = finalStatus;
+            }
+            updateSingleQuestionNavStatus(index);
+        }
+
+
+        function loadQuestion(index) {
+            const question = quizData[index];
+            currentQuestionNumberDisplay.textContent = `Question ${index + 1} of ${quizData.length}`;
+            questionText.textContent = question.question;
+
+            // --- NEW: Handle Image Display ---
+            imageContainer.innerHTML = ''; // Clear previous image
+            if (question.image) {
+                const imgElement = document.createElement('img');
+                imgElement.src = question.image;
+                imgElement.alt = `Image for question ${index + 1}`; // Add alt text
+                // Style applied via CSS now
+                imageContainer.appendChild(imgElement);
+            }
+            // --- END NEW ---
+
+            optionsList.innerHTML = '';
+            question.options.forEach((option, i) => {
+                const li = document.createElement('li');
+                const inputId = `q${index}_option${i}`;
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `question${index}`;
+                input.value = option;
+                input.id = inputId;
+                input.checked = userAnswers[index] === option;
+                input.addEventListener('change', () => {
+                    userAnswers[index] = option;
+                    updateStatus(index);
+                });
+
+                const label = document.createElement('label');
+                label.htmlFor = inputId;
+                label.textContent = option;
+
+                li.appendChild(input);
+                li.appendChild(label);
+                optionsList.appendChild(li);
+            });
+
+            prevButton.disabled = index === 0;
+            nextButton.textContent = index === quizData.length - 1 ? 'Submit' : 'Next';
+
+            reviewButton.textContent = markedForReview[index] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[index] ? '#5a32a3' : '#6f42c1';
+
+            questionViewStartTime = Date.now();
+            startQuestionTimer();
+
+            updateQuestionNavHighlight();
+
+            const questionAreaWrapper = document.querySelector('.question-area-wrapper');
+            if (questionAreaWrapper) questionAreaWrapper.scrollTop = 0;
+        }
+
+        function navigateToQuestion(index) {
+            if (index < 0 || index >= quizData.length || index === currentQuestionIndex) return;
+
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            currentQuestionIndex = index;
+            loadQuestion(currentQuestionIndex);
+        }
+
+        function handleNext() {
+             const leavingIndex = currentQuestionIndex;
+             recordTimeSpent();
+             finalizeStatusOnLeave(leavingIndex);
+
+             if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion(currentQuestionIndex);
+            } else {
+                submitQuiz();
+            }
+        }
+
+        function handlePrev() {
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            if (currentQuestionIndex > 0) {
+               currentQuestionIndex--;
+               loadQuestion(currentQuestionIndex);
+            }
+        }
+
+        function toggleReview() {
+            markedForReview[currentQuestionIndex] = !markedForReview[currentQuestionIndex];
+            updateStatus(currentQuestionIndex);
+            reviewButton.textContent = markedForReview[currentQuestionIndex] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[currentQuestionIndex] ? '#5a32a3' : '#6f42c1';
+        }
+
+
+        function startQuestionTimer() {
+            clearInterval(questionTimerInterval);
+
+            function updateTimerDisplay() {
+                let totalTimeSpentSoFar = timeSpentPerQuestion[currentQuestionIndex];
+                let timeElapsedThisVisit = 0;
+
+                if (questionViewStartTime) {
+                    timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                }
+
+                let currentTotalTime = totalTimeSpentSoFar + timeElapsedThisVisit;
+                let displayTime = Math.round(currentTotalTime);
+
+                questionTimerDisplay.classList.remove('red');
+
+                if (currentTotalTime > QUESTION_TIME_LIMIT) {
+                    let exceededTime = Math.round(currentTotalTime - QUESTION_TIME_LIMIT);
+                    questionTimerDisplay.textContent = `Exceeded: ${exceededTime}s`;
+                    questionTimerDisplay.classList.add('red');
+                } else {
+                     questionTimerDisplay.textContent = `Time: ${displayTime}s`;
+                }
+            }
+
+            updateTimerDisplay();
+            questionTimerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function startTotalTimer() {
+            clearInterval(totalTimerInterval);
+            let currentTime = totalTimeSeconds;
+
+            totalTimerInterval = setInterval(() => {
+                currentTime--;
+                if (currentTime <= 0) {
+                    clearInterval(totalTimerInterval);
+                    totalTimerDisplay.textContent = '00:00';
+                    alert("Time's up!");
+                    submitQuiz();
+                } else {
+                    const minutes = Math.floor(currentTime / 60);
+                    const seconds = currentTime % 60;
+                    totalTimerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function submitQuiz() {
+            recordTimeSpent();
+            finalizeStatusOnLeave(currentQuestionIndex);
+            clearInterval(questionTimerInterval);
+            clearInterval(totalTimerInterval);
+
+             questionStatus.forEach((status, index) => {
+                 if (index !== currentQuestionIndex) {
+                     finalizeStatusOnLeave(index);
+                 }
+             });
+
+            calculateResults();
+            showPage('results-page');
+        }
+
+        function calculateResults() {
+            let score = 0;
+            wrongUnansweredList.innerHTML = '';
+
+            quizData.forEach((question, index) => {
+                const isCorrect = userAnswers[index] === question.answer;
+                if (isCorrect) {
+                    score++;
+                }
+
+                if (questionStatus[index] === 'unanswered' || (userAnswers[index] !== null && !isCorrect)) {
+                    const resultItem = document.createElement('div');
+                    resultItem.classList.add('result-item');
+
+                    const qText = document.createElement('p');
+                    qText.classList.add('question');
+                    qText.innerHTML = `<strong>Q${index + 1}:</strong> ${question.question}`;
+                    resultItem.appendChild(qText);
+
+                    const yourAns = document.createElement('p');
+                    yourAns.innerHTML = `<strong>Your Answer:</strong> `;
+                    if (userAnswers[index] !== null) {
+                         yourAns.innerHTML += `<span class="your-answer">${userAnswers[index]}</span>`;
+                    } else {
+                         yourAns.innerHTML += `<span class="your-answer">Not Answered</span>`;
+                    }
+                     resultItem.appendChild(yourAns);
+
+
+                    const correctAns = document.createElement('p');
+                    correctAns.innerHTML = `<strong>Correct Answer:</strong> <span class="correct-answer">${question.answer}</span>`;
+                    resultItem.appendChild(correctAns);
+
+                    const explanation = document.createElement('p');
+                    explanation.classList.add('explanation');
+                    explanation.textContent = question.explanation;
+                    resultItem.appendChild(explanation);
+
+                    wrongUnansweredList.appendChild(resultItem);
+                }
+            });
+
+            scoreDisplay.textContent = score;
+            totalMarksDisplay.textContent = quizData.length;
+
+            setTimeout(generateTimeChart, 100);
+        }
+
+         function generateTimeChart() {
+            const ctx = timeChartCanvas.getContext('2d');
+             if (!ctx) {
+                console.error("Failed to get canvas context for time chart.");
+                return;
+            }
+            const labels = quizData.map((_, index) => `Q${index + 1}`);
+            const data = timeSpentPerQuestion.map(time => Math.round(time));
+
+            const normalColor = 'rgba(0, 123, 255, 0.3)';
+            const exceededColor = 'rgba(220, 53, 69, 0.3)';
+            const normalBorder = 'rgba(0, 123, 255, 1)';
+            const exceededBorder = 'rgba(220, 53, 69, 1)';
+
+            if (timeChart) {
+                timeChart.destroy();
+            }
+
+            try {
+                timeChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Time Spent (seconds)',
+                                data: data,
+                                fill: true,
+                                tension: 0.3,
+                                segment: {
+                                    borderColor: ctx => (ctx.p1.parsed.y > QUESTION_TIME_LIMIT) ? exceededBorder : normalBorder,
+                                    backgroundColor: ctx => {
+                                        const y1 = ctx.p0.parsed.y;
+                                        const y2 = ctx.p1.parsed.y;
+                                        return (y1 > QUESTION_TIME_LIMIT || y2 > QUESTION_TIME_LIMIT) ? exceededColor : normalColor;
+                                    }
+                                },
+                                 pointBackgroundColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+                                 pointBorderColor: '#fff',
+                                 pointHoverBackgroundColor: '#fff',
+                                 pointHoverBorderColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+
+                            },
+                            {
+                                type: 'line',
+                                label: `${QUESTION_TIME_LIMIT}s Threshold`,
+                                data: Array(quizData.length).fill(QUESTION_TIME_LIMIT),
+                                borderColor: 'rgba(220, 53, 69, 0.8)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Time (seconds)'
+                                }
+                            },
+                            x: {
+                                 title: {
+                                    display: true,
+                                    text: 'Question Number'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.datasetIndex === 1) return null;
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) label += context.parsed.y + 's';
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                         interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                    }
+                });
+            } catch (error) {
+                console.error("Chart.js error:", error);
+            }
+        }
+
+        // --- Event Listeners ---
+        startQuizButton.addEventListener('click', startQuiz);
+        prevButton.addEventListener('click', handlePrev);
+        nextButton.addEventListener('click', handleNext);
+        reviewButton.addEventListener('click', toggleReview);
+
+         nameInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                startQuizButton.click();
+            }
+        });
+
+        // --- Initial Setup ---
+        showPage('landing-page');
+
+    </script>
+
+</body>
+</html>

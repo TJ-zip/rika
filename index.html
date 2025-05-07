@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supreme HTML Quiz</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        /* ... (your existing CSS rules) ... */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars on body */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: #f0f2f5;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quiz-container, .landing-container, .results-container {
+            background-color: #ffffff;
+            overflow: hidden;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .landing-container, .results-container {
+            padding: 30px;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        .results-container {
+            justify-content: flex-start; /* Align results content to top */
+        }
+
+
+        .landing-container h1, .results-container h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2em;
+            font-weight: 600;
+            margin-top: 0;
+        }
+
+        .landing-container input[type="text"] {
+            padding: 10px 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80%;
+            max-width: 300px;
+            font-size: 1em;
+        }
+
+        .start-button, .nav-button, .review-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            margin: 5px;
+            font-weight: 500;
+        }
+
+        .start-button:hover, .nav-button:hover, .review-button:hover {
+            background-color: #0056b3;
+        }
+
+        .quiz-header {
+            background-color: #343a40;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            height: 48px; /* Fixed height */
+            box-sizing: border-box;
+        }
+
+        .quiz-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .user-info {
+            font-size: 0.95em;
+        }
+
+        .quiz-body {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            height: calc(100vh - 48px); /* Full height minus header */
+        }
+
+        .question-nav {
+            width: 200px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            flex-shrink: 0;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .question-nav h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .question-nav-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(35px, 1fr));
+            gap: 8px;
+        }
+
+        .question-nav-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 35px;
+            height: 35px;
+            border: 1px solid #adb5bd;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: normal;
+            background-color: #ffffff;
+            color: #495057;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            position: relative;
+            font-size: 0.9em;
+        }
+
+        .question-nav-item:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Status Colors */
+        .question-nav-item.status-default { background-color: #ffffff; color: #495057; border-color: #adb5bd;} /* White */
+        .question-nav-item.status-answered { background-color: #28a745; color: white; border-color: #218838; } /* Green */
+        .question-nav-item.status-unanswered { background-color: #dc3545; color: white; border-color: #c82333; } /* Red */
+        .question-nav-item.status-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple */
+        .question-nav-item.status-answered-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple + Green Dot */
+
+        /* Green dot for answered and reviewed */
+        .question-nav-item.status-answered-review::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 7px;
+            height: 7px;
+            background-color: #28a745; /* Green dot */
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+
+
+        .main-content {
+            flex-grow: 1;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            /* justify-content: space-between; REMOVED - Let content flow naturally */
+            overflow-y: auto; /* Allow scrolling for the whole main area */
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .timers {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1em;
+            font-weight: 500;
+            color: #495057;
+            flex-shrink: 0;
+        }
+
+        .timer {
+            background-color: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+        .timer.red {
+            color: #dc3545;
+            border-color: #dc3545;
+            font-weight: 600;
+        }
+
+        .question-area-wrapper { /* Wrapper for question and options */
+             /* Allow this area to take up available space before buttons */
+             flex-grow: 1;
+             margin-bottom: 20px; /* Space before buttons */
+             /* Removed overflow-y: auto; let main-content handle scrolling */
+        }
+
+        .question-text {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: #212529;
+            font-weight: 500;
+        }
+
+        /* --- NEW: Image Container Styling --- */
+        #question-image-container {
+             margin-bottom: 20px; /* Space between image and options */
+             text-align: center; /* Center the image */
+        }
+        #question-image-container img {
+             max-width: 100%; /* Make image responsive */
+             height: auto;    /* Maintain aspect ratio */
+             max-height: 300px; /* Optional: Limit max height */
+             border-radius: 4px; /* Optional: Rounded corners */
+             box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: Slight shadow */
+        }
+         /* --- END NEW --- */
+
+        .options {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .options li {
+            margin-bottom: 10px;
+        }
+
+        .options label {
+            display: block;
+            background-color: #f8f9fa;
+            border: 1px solid #ced4da;
+            padding: 12px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            font-size: 1em;
+            font-weight: normal;
+        }
+
+        .options input[type="radio"] {
+            margin-right: 10px;
+            display: none;
+        }
+
+         .options label:hover {
+             background-color: #e2e6ea;
+             border-color: #adb5bd;
+         }
+
+        .options input[type="radio"]:checked + label {
+            background-color: #cfe2ff;
+            border-color: #007bff;
+            font-weight: 500;
+            color: #0056b3;
+        }
+
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            /* margin-top: auto; REMOVED - Let it sit naturally at the bottom */
+            flex-shrink: 0; /* Prevent buttons area from shrinking */
+        }
+
+        .nav-button.prev { background-color: #ffc107; color: #212529;}
+        .nav-button.prev:hover { background-color: #e0a800; }
+        .review-button { background-color: #6f42c1; }
+        .review-button:hover { background-color: #5a32a3; }
+        .nav-button.next { background-color: #28a745; }
+        .nav-button.next:hover { background-color: #218838; }
+        .nav-button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .nav-button.submit { background-color: #dc3545; }
+        .nav-button.submit:hover { background-color: #c82333; }
+
+
+        /* Results Page Specifics */
+        .results-content {
+             width: 100%;
+             max-width: 900px;
+             margin: 0 auto;
+             padding: 20px 0;
+        }
+
+        .score-card {
+            background-color: #e6f7ff;
+            border: 1px solid #007bff;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+        }
+        .score-card h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #0056b3;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        .score-card p {
+            font-size: 1.2em;
+            font-weight: 500;
+            color: #343a40;
+            margin: 5px 0;
+        }
+
+        .results-section {
+            margin-bottom: 25px;
+            text-align: left;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        .results-section h3 {
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .result-item {
+            border-bottom: 1px dashed #ced4da;
+            padding: 12px 0;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-item p {
+            margin: 4px 0;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+        .result-item .question { font-weight: 600; color: #343a40; }
+        .result-item .your-answer { color: #dc3545; font-weight: 500;}
+        .result-item .correct-answer { color: #28a745; font-weight: 500;}
+        .result-item .explanation { font-style: normal; color: #6c757d; margin-top: 8px; font-size: 0.95em;}
+
+        .time-analysis {
+             padding: 15px;
+             background-color: #f8f9fa;
+             border: 1px solid #dee2e6;
+             border-radius: 5px;
+             margin-bottom: 20px;
+        }
+        .time-analysis h3 {
+             color: #495057;
+             border-bottom: 1px solid #dee2e6;
+             padding-bottom: 8px;
+             margin-bottom: 15px;
+             text-align: left;
+             font-size: 1.2em;
+             font-weight: 600;
+        }
+        #timeChart {
+            max-height: 350px;
+            width: 100% !important;
+        }
+
+        /* Hide elements */
+        .hidden {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Landing Page -->
+    <div id="landing-page" class="landing-container">
+        <h1>Welcome Rika!</h1>
+        <input type="text" id="name-input" placeholder="Want to Change your Name?">
+        <br>
+        <button id="start-quiz-button" class="start-button">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Page -->
+    <div id="quiz-page" class="quiz-container hidden">
+        <div class="quiz-header">
+            <h1>Oswal 360 Physics 1</h1>
+            <div class="user-info">
+                <span>Name: <span id="user-name"></span></span> |
+                <span>Total Time Left: <span id="total-timer">50:00</span></span>
+            </div>
+        </div>
+        <div class="quiz-body">
+            <div class="question-nav">
+                <h3>Question Palette</h3>
+                <ul id="question-nav-list" class="question-nav-list">
+                    <!-- Question numbers will be dynamically added here -->
+                </ul>
+            </div>
+            <div class="main-content">
+                <!-- Top content wrapper -->
+                <div class="timers">
+                    <span id="current-question-number">Question X of Y</span>
+                    <span class="timer" id="question-timer">Time: 1s</span>
+                </div>
+                <!-- Scrollable question area -->
+                <div class="question-area-wrapper">
+                    <p id="question-text" class="question-text">Question text goes here...</p>
+                    <!-- === NEW: Image container === -->
+                    <div id="question-image-container"></div>
+                    <!-- === END NEW === -->
+                    <ul id="options-list" class="options">
+                        <!-- Options will be dynamically added here -->
+                    </ul>
+                </div>
+                 <!-- Navigation buttons at the bottom -->
+                <div class="navigation-buttons">
+                    <button id="prev-button" class="nav-button prev">Previous</button>
+                    <button id="review-button" class="review-button">Mark for Review</button>
+                    <button id="next-button" class="nav-button next">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Page -->
+    <div id="results-page" class="results-container hidden">
+       <div class="results-content">
+            <h1>Quiz Results</h1>
+            <div id="score-card" class="score-card">
+                <h2>Score</h2>
+                <p><span id="score">0</span> / <span id="total-marks">0</span></p>
+                 <p>Well done, <span id="result-user-name">User</span>!</p>
+            </div>
+
+            <div id="wrong-unanswered-list" class="results-section">
+                <h3>Review Incorrect & Unanswered Questions</h3>
+                <!-- Incorrect/Unanswered questions will be added here -->
+            </div>
+
+            <div class="time-analysis">
+                 <h3>Time Analysis Per Question</h3>
+                <canvas id="timeChart"></canvas>
+            </div>
+             <button onclick="window.location.reload();" class="start-button">Restart Quiz</button>
+        </div>
+    </div>
+
+<script>
+  const quizData = [
+    {
+        "question": "Ionic solids containing large differences in sizes of ions show",
+        "options": ["Frenkel defect", "F - centers", "Schottky defect", "Interstitials defect"],
+        "answer": "Frenkel defect",
+        "explanation": "Explanation: Smaller atoms can easily occupy interstitial position showing Frenkel Defect."
+    },
+    {
+        "question": "Non-stoichiometric NaCl is _______ in colour.",
+        "options": ["red", "lilac", "blue", "yellow"],
+        "answer": "yellow",
+        "explanation": "Explanation: Non-stoichiometric NaCl is yellow in colour."
+    },
+    {
+        "question": "The energy band gap is maximum in:",
+        "options": ["insulators", "super conductor", "semiconductors", "metals"],
+        "answer": "insulators",
+        "explanation": "Explanation: Metals have minimum energy gap and insulators have maximum energy gap and semi-conductors have energy gap lying between insulators and metals."
+    },
+    {
+        "question": "The radius of an ion in a body centred cube of edge a is:",
+        "options": ["Iza", "V3a", "a", "a"],
+        "answer": "a",
+        "explanation": "Explanation: In bcc, radius is equal to edge"
+    },
+    {
+        "question": "The tanks used by divers are filled with air diluted with",
+        "options": ["Helium", "Argon", "Nitrogen", "Hydrogen"],
+        "answer": "Helium",
+        "explanation": "Explanation: Size of Helium is small so does not causes \"Bents\" to divers when the dive back to surface. As it is less soluble."
+    },
+    {
+        "question": "In which unit, the concentration of solution remains independent of temperature",
+        "options": ["formality", "normality", "molality", "molarity"],
+        "answer": "molality",
+        "explanation": "Explanation: It is independent of volume hence independent of Temperature."
+    },
+    {
+        "question": "A compound undergoes complete tetramerization in a given organic sovent. The Van't Hoff factor i is:",
+        "options": ["4.0", "2.0", "0.25", "0.125"],
+        "answer": "0.25",
+        "explanation": "Explanation: When a compound undergoes complete tetramerization, 4 molecules associate to form 1 particle. The Van't Hoff factor (i) is the ratio of the observed number of particles to the expected number of particles. i = 1/4 = 0.25."
+    },
+    {
+        "question": "A beaker contains a solution of a substance 'A'. Precipitation of substance 'A' takes place when a small amount of 'A' is added to the solution. The solution is",
+        "options": ["supersaturated", "unsaturated", "concentrated", "saturated"],
+        "answer": "supersaturated",
+        "explanation": "Explanation: When a small amount of solute is added to its solution and it does not dissolve and get precipitated then this solution is supersaturated solution. The supersaturated solution usually contains more of the dissolved material ."
+    },
+    {
+        "question": "In a typical fuel cell, the reactant (R) and product (P) are",
+        "options": ["R = H2(g), 02(g) : P= H20()", "R = H2(g), N2(g) : P = NH3(aq)", "R = H2(g), 02(g) : P= H202(‹)", "R = H2(g), 02(g), C12(g) : P = HC10 4(aq)"],
+        "answer": "R = H2(g), 02(g) : P= H20(()",
+        "explanation": "Explanation: A common type of fuel cell, the hydrogen-oxygen fuel cell, uses H₂(g) and O₂(g) as reactants and produces water (H₂O) as the product."
+    },
+    {
+        "question": "The number of faradays passed through a solution of CuSO4 to produce mol of Cu and 02 will be:",
+        "options": ["4.0", "8.0", "1.0", "2.0"],
+        "answer": "2.0",
+        "explanation": "Explanation: The reduction of Cu²⁺ to Cu is Cu²⁺ + 2e⁻ → Cu. This requires 2 moles of electrons per mole of Cu. Oxidation of water to O₂ is 2H₂O → O₂ + 4H⁺ + 4e⁻. Producing 1 mole of O₂ requires 4 moles of electrons. The question asks for producing 'mol' of Cu and O₂, which seems incomplete (presumably 1 mole of each or some specified amount). Assuming it means producing 1 mole of Cu and 1 mole of O₂, it would require 2F for Cu and 4F for O₂, totaling 6F. If it means producing enough of both such that the total charge passed is related to the options, and given the answer is 2F, it likely refers to producing 1 mole of Cu (requiring 2F) OR producing 0.5 moles of O₂ (requiring 2F). Given the brevity, assuming it refers to the process needing 2F in relation to Cu production from CuSO₄ solution. Two faraday of electricity is passed through a solution of CuSO4."
+    },
+    {
+        "question": "Which of the following is affected by catalyst?",
+        "options": ["Ea", "AG", "ДН", "AS"],
+        "answer": "Ea",
+        "explanation": "Explanation: A catalyst works by lowering the activation energy (Ea) of a reaction by providing an alternative reaction pathway. It does not change the equilibrium constant (related to ΔG, ΔH, ΔS)."
+    },
+    {
+        "question": "As temperature increases, the reaction rate:",
+        "options": ["First decreases then increases", "Increases", "Decreases", "Stays the same"],
+        "answer": "Increases",
+        "explanation": "Explanation: With an increase in temperature, the kinetic energy of molecules increases, leading to more frequent and more energetic collisions. This increases the number of effective collisions (collisions with sufficient energy to overcome the activation barrier), hence the rate of reaction also increases."
+    },
+    {
+        "question": "The role of a catalyst is to change",
+        "options": ["gibbs energy of reaction", "equilibrium constant", "enthalpy of reaction", "activation energy of reaction"],
+        "answer": "activation energy of reaction",
+        "explanation": "Explanation: A catalyst lowers the activation energy of a reaction, allowing a greater proportion of reactant molecules to have sufficient energy to react, thereby increasing the reaction rate."
+    },
+    {
+        "question": "Milk turns sour at 40°C three times faster than it does at 0°C. this shows that activation energy of souring of milk (in cal) is",
+        "options": ["4.606 × 40 10g 3 / 273×313", "2.303x273x313x8.314xlog 3", "4.606 x 273 x 31310g 3", "2.303x273x313 10g 3"],
+        "answer": "2.303x273x313x8.314xlog 3",
+        "explanation": "Explanation: Using the Arrhenius equation: ln(k₂/k₁) = -Ea/R * (1/T₂ - 1/T₁). Given rate at T₂=40°C (313K) is 3 times rate at T₁=0°C (273K), so k₂/k₁ = 3. R = 8.314 J/mol·K. ln(3) = -Ea/8.314 * (1/313 - 1/273). ln(3) = -Ea/8.314 * ((273-313)/(313*273)). ln(3) = -Ea/8.314 * (-40)/(313*273). ln(3) = Ea/8.314 * 40/(313*273). Ea = ln(3) * 8.314 * 313 * 273 / 40. Using log₁₀: 2.303 log₁₀(3) = Ea/8.314 * 40/(313*273). Ea = 2.303 log₁₀(3) * 8.314 * 313 * 273 / 40. Option B seems to miss the division by 40 and contains the 8.314 (which is in J/mol·K, conversion to cal/mol is needed if the question specifies cal). The calculation in the explanation '108 = 2508 A - t)' is unclear. Re-examining option B: 2.303 * 273 * 313 * 8.314 * log(3). This formula does not match the Arrhenius equation manipulation. There seems to be an error in the options or explanation. Let's assume the question intends the formula rearrangement as in the options, despite its incorrect appearance. Following the provided answer key, the answer is B."
+    },
+    {
+        "question": "Smoke is an example of:",
+        "options": ["solid dispersed in solid", "solid dispersed in gas", "gas dispersed in liquid", "gas dispersed in solid"],
+        "answer": "solid dispersed in gas",
+        "explanation": "Explanation: Smoke is an aerosol, which is a colloidal system where solid particles (like soot or ash) are dispersed in a gas (air)."
+    },
+    {
+        "question": "Which is not shown by sols?",
+        "options": ["Adsorption", "Flocculation", "Tyndall effect", "Paramagnetism"],
+        "answer": "Paramagnetism",
+        "explanation": "Explanation: Colloidal sols show properties like adsorption (particles adsorb ions), flocculation/coagulation (settling upon adding electrolyte), and the Tyndall effect (scattering of light). Paramagnetism is a magnetic property of substances with unpaired electrons, not a general property of all colloidal sols."
+    },
+    {
+        "question": "Which of the following will show more intensity of scattering?",
+        "options": ["Milk", "Starch sol", "Gold sol", "Protein sol"],
+        "answer": "Gold sol",
+        "explanation": "Explanation: The intensity of Tyndall scattering depends on the size and nature of the colloidal particles. Lyophobic sols (like gold sol) generally have larger and more rigid particles compared to lyophilic sols (like starch sol, protein sol, milk), leading to more intense scattering of light."
+    },
+    {
+        "question": "The term sorption stands for",
+        "options": ["adsorption", "both absorption and adsorption", "desorption", "absorption"],
+        "answer": "both absorption and adsorption",
+        "explanation": "Explanation: Sorption is a general term that encompasses both adsorption (accumulation of substance on a surface) and absorption (uptake of substance into the bulk of another material)."
+    },
+    {
+        "question": "Which of the following substance can be used for drying gases?",
+        "options": ["Anhydrous CaO", "CaCO3", "NaHCO3", "Na2CO3"],
+        "answer": "Anhydrous CaO",
+        "explanation": "Explanation: Anhydrous calcium oxide (CaO), also known as quicklime, is a basic drying agent used to remove moisture from gases, particularly acidic gases, as it reacts with water to form Ca(OH)₂."
+    },
+    {
+        "question": "The distillation process is used for the purification of",
+        "options": ["Pb", "Hg", "C's", "Sn"],
+        "answer": "Hg",
+        "explanation": "Explanation: Distillation is used to purify metals with low boiling points. Mercury (Hg) has a relatively low boiling point and is commonly purified by distillation. Pb, Sn, and Cs have higher boiling points, requiring other refining methods."
+    },
+    {
+        "question": "In the thermite process, the reducing agent is:",
+        "options": ["Nickel", "Zinc", "Sodium", "Aluminium"],
+        "answer": "Aluminium",
+        "explanation": "Explanation: The thermite process involves the reaction between a metal oxide (commonly iron(III) oxide) and powdered aluminum. Aluminum acts as the reducing agent, reducing the metal oxide to the free metal while being oxidized itself."
+    },
+    {
+        "question": "In zone refining, pure metal is obtained at the",
+        "options": ["Left end, if zone is travelling from left to right", "Right end, if zone is travelling from left to right", "Left end, if zone is travelling from right to left", "Centre, if zone is travelling from any side"],
+        "answer": "Right end, if zone is travelling from left to right",
+        "explanation": "Explanation: Zone refining is a purification technique where a narrow molten zone is moved along a solid rod of impure metal. Impurities are more soluble in the molten phase and preferentially stay in the moving zone, being swept to one end of the rod. If the zone travels from left to right, the impurities accumulate at the right end, leaving the pure metal at the left end. The explanation provided in the source contradicts the provided answer ('Left end, if zone is travelling from left to right'). Following the key provided as the answer."
+    },
+    {
+        "question": "Iodine is liberated from KI solution when treated with",
+        "options": ["NiSO4", "FeSO4", "CuSO4", "ZnSO4"],
+        "answer": "CuSO4",
+        "explanation": "Explanation: Cu²⁺ ions from CuSO₄ solution can oxidize iodide ions (I⁻) from KI solution to iodine (I₂), while Cu²⁺ is reduced to CuI (copper(I) iodide), which precipitates. The reaction is 2Cu²⁺ + 4I⁻ → 2CuI(s) + I₂(aq)."
+    },
+    {
+        "question": "Nitrous oxide is evolved when Zn is treated with:",
+        "options": ["Conc. Nitric acid", "None of these", "Nitrous acid", "Dilute nitric acid"],
+        "answer": "Dilute nitric acid",
+        "explanation": "Explanation: The reaction of zinc metal with cold and dilute nitric acid produces zinc nitrate, nitrous oxide (N₂O), and water: 4Zn(s) + 10HNO₃(dilute) → 4Zn(NO₃)₂(aq) + N₂O(g) + 5H₂O(l)."
+    },
+    {
+        "question": "Which of the following is soluble in turpentine oil?",
+        "options": ["Hydrogen sulphide", "Nitrogen", "Ozone", "Oxygen"],
+        "answer": "Ozone",
+        "explanation": "Explanation: Ozone (O₃) is moderately soluble in water but significantly more soluble in organic solvents like turpentine oil, glacial acetic acid, or carbon tetrachloride. This property is sometimes used for the quantitative estimation of ozone."
+    },
+    {
+        "question": "Which one among the following metals of 3d series has the lowest melting point?",
+        "options": ["Cu", "Fe", "Zn", "Mn"],
+        "answer": "Zn",
+        "explanation": "Explanation: Among the 3d transition metals, Zinc (Zn) has the lowest melting point. This is because it does not have unpaired d-electrons contributing to metallic bonding, resulting in weaker interatomic forces compared to other transition metals in the series."
+    },
+    {
+        "question": "The percentage of nickel in the alloy steel that is used for making pendulum is:",
+        "options": ["19%", "36%", "0%", "10%"],
+        "answer": "36%",
+        "explanation": "Explanation: The alloy used for making pendulums and measuring tapes due to its very low coefficient of thermal expansion is Invar, which is an alloy of iron and nickel containing approximately 36% nickel."
+    },
+    {
+        "question": "Which of the following oxidation state is common for all lanthanoids?",
+        "options": ["+ 5", "+2", "+ 4", "+ 3"],
+        "answer": "+ 3",
+        "explanation": "Explanation: The most common and stable oxidation state exhibited by all lanthanoids (elements from Lanthanum to Lutetium) is +3."
+    },
+    {
+        "question": "Which of the following species is not expected to be a ligand?",
+        "options": ["H20", "CO", "NH$", "NH3"],
+        "answer": "NH$",
+        "explanation": "Explanation: A ligand is a species that can donate a lone pair of electrons to a central metal atom or ion to form a coordination bond. H₂O (water), CO (carbon monoxide), and NH₃ (ammonia) all have lone pairs and act as common ligands. NH₄⁺ (ammonium ion, represented by NH$) has no available lone pair of electrons for donation and is therefore not typically a ligand."
+    },
+    {
+        "question": "When 1 mol CrCl3 6H2O is treated with an excess of AgNO3, 3 mol of AgCl are obtained. The formula of the complex is:",
+        "options": ["[CrCl(H20)4]Cl-2H20", "[Cr(H20)6JCl3", "[CrCl3(H20)3J•3H20", "[CrClH20)5JCl2•H20"],
+        "answer": "[Cr(H20)6JCl3",
+        "explanation": "Explanation: Treatment with excess AgNO₃ precipitates chloride ions that are outside the coordination sphere (ionizable chlorides) as AgCl. Obtaining 3 moles of AgCl from 1 mole of the complex means there are 3 ionizable chloride ions per complex unit. In CrCl₃·6H₂O, with a typical coordination number of 6 for Cr³⁺, the formula where all three chlorides are ionizable is [Cr(H₂O)₆]Cl₃."
+    },
+    {
+        "question": "Which of the following complexes is a chelate complex?",
+        "options": ["[Co(NH3)6]3+", "[Co(en)313+", "[Co(NH3)4CI2]*", "[CoF 613-"],
+        "answer": "[Co(en)313+",
+        "explanation": "Explanation: A chelate complex involves a ligand that binds to the central metal ion through more than one donor atom, forming a ring structure. Ethylenediamine ('en') is a bidentate ligand (donates through two nitrogen atoms) and forms chelate rings with the central metal ion. [Co(en)₃]³⁺ contains three ethylenediamine ligands, each forming a chelate ring, making it a chelate complex. The other ligands (NH₃, Cl⁻, F⁻) in options A, C, and D are monodentate ligands."
+    },
+    {
+        "question": "A halogen used in potential blood substitutes in surgery is:",
+        "options": ["Fluorine", "Bromine", "Iodine", "Chlorine"],
+        "answer": "Fluorine",
+        "explanation": "Explanation: Perfluorocarbons (compounds where hydrogen atoms in hydrocarbons are replaced by fluorine atoms) are being investigated and used as synthetic blood substitutes due to their ability to dissolve significant amounts of oxygen and carbon dioxide."
+    },
+    {
+        "question": "Which of the following molecules has a chiral centre correctly labelled with an asterisk",
+        "options": ["Neither SN2 nor SN 1 reaction", "SN2 reaction", "SN 1 reaction", "SNl as well as SN2 reaction"],
+        "answer": "SN2 reaction",
+        "explanation": "Explanation: This question is incomplete and seems disconnected from the options and explanation provided. The question asks about a chiral center, while options and explanation refer to SN1/SN2 reactions and inversion of configuration. Assuming there was a diagram with a chiral center shown and the follow-up question/explanation related to a reaction mechanism at that center. The explanation states 'Inversion of configuration occur in SN2 reaction', which is a property of the SN2 mechanism."
+    },
+    {
+        "question": "Which of the following compounds has the highest boiling points?",
+        "options": ["CH3CH2CH2C1", "CH3CH2CH2CH2C1", "(CH3)3C1", "CH3CH(CH3)CH2C1"],
+        "answer": "CH3CH2CH2CH2C1",
+        "explanation": "Explanation: Boiling point of haloalkanes generally increases with increasing molecular weight and increasing chain length due to stronger London dispersion forces. Branching decreases boiling point because it reduces the surface area for intermolecular contact, leading to weaker Van der Waals forces. CH₃CH₂CH₂CH₂Cl (1-chlorobutane) is a straight-chain isomer with the highest molecular weight/number of electrons among the options (assuming Cl, not I as in option C typo). (CH₃)₃CCl (tert-butyl chloride) and CH₃CH(CH₃)CH₂Cl (1-chloro-2-methylpropane) are branched isomers with lower boiling points than their straight-chain counterparts. Therefore, the straight-chain compound with the longest carbon chain, CH₃CH₂CH₂CH₂Cl, will have the highest boiling point."
+    },
+    {
+        "question": "Choose the compound which is more acidic than phenol:",
+        "options": ["o-nitrophenol", "o-methylphenol", "o-methoxyphenol", "ethanol"],
+        "answer": "o-nitrophenol",
+        "explanation": "Explanation: The acidity of phenols is influenced by substituents on the benzene ring. Electron-withdrawing groups (like -NO₂) increase acidity by stabilizing the phenoxide ion through resonance and inductive effects. Electron-donating groups (like -CH₃ or -OCH₃) decrease acidity. Phenol is more acidic than aliphatic alcohols like ethanol. o-Nitrophenol has a strong electron-withdrawing -NO₂ group at the ortho position, which significantly increases its acidity compared to phenol. o-Methylphenol (o-cresol) has an electron-donating -CH₃ group, making it less acidic than phenol. o-Methoxyphenol has an electron-donating -OCH₃ group (though it also has an electron-withdrawing inductive effect, resonance donation is dominant in phenols), making it less acidic than phenol. Ethanol is much less acidic than phenol."
+    },
+    {
+        "question": "IUPAC name of m-cresol is",
+        "options": ["3-chlorophenol", "benzene-1, 3-diol", "3-methoxyphenol", "3-methylphenol"],
+        "answer": "3-methylphenol",
+        "explanation": "Explanation: m-cresol is a common name for 3-methylphenol. Phenol is the base name (benzene ring with an -OH group). The 'm-' (meta) position relative to the -OH group is the 3-position. A methyl group (-CH₃) is located at this position. So, the IUPAC name is 3-methylphenol."
+    },
+    {
+        "question": "Which of the following is an Acetal?",
+        "options": ["[Structure representing Acetone]", "(CH3)3 C - CHO", "HCHO", "(CH3)2 CH - CHO"],
+        "answer": "HCHO",
+        "explanation": "Explanation: An acetal is a functional group with the connectivity R₂C(OR')₂, formed from the reaction of an aldehyde or ketone with alcohols. The options provided do not seem to correctly represent acetals. Option A seems to be Acetone. Option B is 2,2-dimethylpropanal (an aldehyde). Option C is formaldehyde (an aldehyde). Option D is isobutyraldehyde (an aldehyde). The provided answer HCHO (formaldehyde) is an aldehyde, not an acetal. There is a likely error in the question or options provided in the source material."
+    },
+    {
+        "question": "Which of the following does not give silver mirror test?",
+        "options": ["CH3CH2CHO", "HCOOH", "CH3 CHO", "CH3 COCH3"],
+        "answer": "CH3 COCH3",
+        "explanation": "Explanation: The silver mirror test (Tollens' test) is used to distinguish between aldehydes and ketones. Aldehydes reduce Tollens' reagent (ammoniacal silver nitrate) to metallic silver, forming a silver mirror. Ketones generally do not react with Tollens' reagent. CH₃CH₂CHO (propanal), HCOOH (formic acid - which has an aldehyde functional group embedded), and CH₃CHO (acetaldehyde) are all aldehydes or have an aldehyde-like functional group capable of reducing Tollens' reagent. CH₃COCH₃ (acetone) is a ketone and will not give the silver mirror test."
+    },
+    {
+        "question": "Amide which gives propanamine by Hoffmann bromamide is:",
+        "options": ["Pentanamide", "Hexanamide", "Butanamine", "Propanamine"],
+        "answer": "Butanamine",
+        "explanation": "Explanation: The Hoffmann bromamide degradation reaction converts a primary amide (RCONH₂) into a primary amine (RNH₂) with one less carbon atom. If the product amine is propanamine (CH₃CH₂CH₂NH₂, 3 carbons), the starting amide must have had 4 carbons, i.e., butanamide (CH₃CH₂CH₂CONH₂)."
+    },
+    {
+        "question": "Anisole reacts with a mixture of concentrated sulphuric and nitric acids to yield a mixture of ortho and para nitroanisole. The below reaction yields:",
+        "options": ["ortho and para in equal amounts", "major product is ortho nitroanisole", "None of these", "major product is para nitroanisole"],
+        "answer": "major product is para nitroanisole",
+        "explanation": "Explanation: Anisole (methoxybenzene) undergoes electrophilic aromatic substitution, such as nitration. The methoxy group (-OCH₃) is an activating group and is ortho, para-directing due to resonance effects. While both ortho and para products are formed, the para isomer is typically the major product because it experiences less steric hindrance from the bulky nitrating mixture compared to the ortho position."
+    },
+    {
+        "question": "The 1, 2, 3 that are involved in completing the above synthesis are",
+        "options": ["None of these", "HNO3, H2SO4, 288K", "HNO3, H2SO4, 473K", "HNO3, H2SO4, 453K"],
+        "answer": "HNO3, H2SO4, 288K",
+        "explanation": "Explanation: The provided reaction in the image is the nitration of aniline. Direct nitration of aniline under standard conditions (conc. HNO₃/conc. H₂SO₄ at higher temperatures) leads to significant tar formation and a mixture of products, including a substantial amount of the meta product due to protonation of the amino group in acidic conditions. However, carrying out the nitration at a lower temperature (around 288K) minimizes side reactions and allows for better control, yielding a mixture of ortho, meta, and para nitroanilines. The explanation provided mentions 'direct nitration of aniline using a nitrating mixture which gives a mixture of products' and 'optimum temperature required is 288K', aligning with option B."
+    },
+    {
+        "question": "Deficiency of Vitamin B12 causes",
+        "options": ["Rickets", "Beri Beri", "Pernicious anaemia", "Blood clotting"],
+        "answer": "Pernicious anaemia",
+        "explanation": "Explanation: Deficiency of Vitamin B12 (cyanocobalamin) impairs DNA synthesis, particularly in rapidly dividing cells like those in the bone marrow responsible for producing red blood cells, leading to megaloblastic anemia, specifically pernicious anemia when caused by impaired absorption."
+    },
+    {
+        "question": "The vitamin that cannot be stored in our body is",
+        "options": ["vitamin E", "vitamin C", "vitamin K", "vitamin D"],
+        "answer": "vitamin C",
+        "explanation": "Explanation: Water-soluble vitamins (Vitamin C and B complex vitamins, except B12) are generally not stored in significant amounts in the body and are readily excreted in urine, requiring regular dietary intake."
+    },
+    {
+        "question": "In nucleic acids, the sequence is:",
+        "options": ["Base - sugar - phosphate", "Base - phosphate - sugar", "Phosphate - sugar - base", "Sugar - base - phosphate"],
+        "answer": "Phosphate - sugar - base",
+        "explanation": "Explanation: A nucleotide, the monomer unit of nucleic acids (DNA and RNA), consists of three components: a nitrogenous base, a pentose sugar (deoxyribose in DNA, ribose in RNA), and a phosphate group. The base is attached to the 1' carbon of the sugar, and the phosphate group is attached to the 5' carbon of the sugar. Nucleotides link together via phosphodiester bonds between the phosphate group (attached to the 5' carbon of one sugar) and the 3' carbon of the sugar in the next nucleotide. Thus, along the sugar-phosphate backbone, the sequence is ...-Phosphate-Sugar-Phosphate-Sugar-... with bases attached to the sugars. A single nucleotide unit in the chain structure shows the arrangement: -Phosphate-Sugar-Base."
+    },
+    {
+        "question": "High density polythene is formed in presence of",
+        "options": ["zinc acetate-antimony trioxide", "water", "Ziegler-Natta catalyst", "traces of dioxygen or a peroxide initiator (catalyst)"],
+        "answer": "Ziegler-Natta catalyst",
+        "explanation": "Explanation: High-density polyethylene (HDPE) is produced by the polymerization of ethene at low pressure (6-7 atm) and moderate temperature (333-343 K) in the presence of a Ziegler-Natta catalyst (a coordination catalyst, commonly a mixture of triethylaluminium and titanium tetrachloride). Low-density polyethylene (LDPE) is produced under high pressure and temperature using free radical initiators like peroxides."
+    },
+    {
+        "question": "Vulcanisation makes rubber",
+        "options": ["Both more elastic and stiff", "crystalline", "more stiff", "more elastic"],
+        "answer": "Both more elastic and stiff",
+        "explanation": "Explanation: Vulcanization is the process of heating rubber with sulfur (and additives) to improve its properties. Sulfur forms cross-links between the polymer chains. This process increases the strength, elasticity (ability to return to original shape), and stiffness of rubber, making it more durable and less prone to deformation."
+    },
+    {
+        "question": "Bakelite is used for making",
+        "options": ["electrical switches", "water pipes", "paints", "laminated sheets"],
+        "answer": "electrical switches",
+        "explanation": "Explanation: Bakelite is a thermosetting polymer formed by the condensation reaction of phenol and formaldehyde. Once molded and set, it cannot be remelted or reshaped. Its properties (electrical insulation, heat resistance, hardness) make it suitable for electrical switches, handles of utensils, and other molded articles."
+    },
+    {
+        "question": "A patient was suffering from severe pain after a major operation. To reduce his pain, the doctor administered",
+        "options": ["Narcotic analgesic", "Non - narcotic analgesic", "Antihistamine", "Antibiotic"],
+        "answer": "Narcotic analgesic",
+        "explanation": "Explanation: Narcotic analgesics (like morphine, pethidine) are potent pain relievers used to manage severe pain, such as post-operative pain. Non-narcotic analgesics (like aspirin, ibuprofen) are used for mild to moderate pain. Antihistamines treat allergies, and antibiotics treat bacterial infections."
+    },
+    {
+        "question": "Equanil is",
+        "options": ["artificial sweetener", "tranquillizer", "antifertility drug", "antihistamine"],
+        "answer": "tranquillizer",
+        "explanation": "Explanation: Equanil (meprobamate) is a carbamate derivative historically used as a sedative and anxiolytic (tranquilizer) for the treatment of anxiety disorders and insomnia."
+    },
+    {
+        "question": "The artificial sweetener containing chlorine that has the appearance and taste as that of sugar and is stable at cooking temperature is:",
+        "options": ["Sucralose", "Saccharin", "Aspartame", "Alitame"],
+        "answer": "Sucralose",
+        "explanation": "Explanation: Sucralose is an artificial sweetener derived from sucrose where three hydrogen-oxygen groups are replaced by chlorine atoms. It is significantly sweeter than sugar, has a sugar-like taste profile, and is stable under heat and a wide range of pH conditions, making it suitable for baking and cooking."
+    }
+    ];
+    
+
+        // --- State Variables ---
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(quizData.length).fill(null);
+        let questionStatus = new Array(quizData.length).fill('default');
+        let markedForReview = new Array(quizData.length).fill(false);
+        let timeSpentPerQuestion = new Array(quizData.length).fill(0);
+        let questionTimerInterval;
+        let totalTimerInterval;
+        let questionViewStartTime = null;
+        let totalTimeSeconds = 50 * 60;
+        let userName = "";
+        let timeChart = null;
+        const QUESTION_TIME_LIMIT = 45;
+
+        // --- DOM Elements ---
+        const landingPage = document.getElementById('landing-page');
+        const quizPage = document.getElementById('quiz-page');
+        const resultsPage = document.getElementById('results-page');
+        const nameInput = document.getElementById('name-input');
+        const startQuizButton = document.getElementById('start-quiz-button');
+        const userNameDisplay = document.getElementById('user-name');
+        const resultUserNameDisplay = document.getElementById('result-user-name');
+        const totalTimerDisplay = document.getElementById('total-timer');
+        const questionNavList = document.getElementById('question-nav-list');
+        const currentQuestionNumberDisplay = document.getElementById('current-question-number');
+        const questionTimerDisplay = document.getElementById('question-timer');
+        const questionText = document.getElementById('question-text');
+        const optionsList = document.getElementById('options-list');
+        const prevButton = document.getElementById('prev-button');
+        const reviewButton = document.getElementById('review-button');
+        const nextButton = document.getElementById('next-button');
+        const scoreDisplay = document.getElementById('score');
+        const totalMarksDisplay = document.getElementById('total-marks');
+        const wrongUnansweredList = document.getElementById('wrong-unanswered-list');
+        const timeChartCanvas = document.getElementById('timeChart');
+        const imageContainer = document.getElementById('question-image-container'); // <-- Get image container
+
+        // --- Functions ---
+
+        function showPage(pageId) {
+            landingPage.classList.add('hidden');
+            quizPage.classList.add('hidden');
+            resultsPage.classList.add('hidden');
+            const pageToShow = document.getElementById(pageId);
+            if (pageToShow) {
+                pageToShow.classList.remove('hidden');
+            }
+        }
+
+        function startQuiz() {
+            userName = nameInput.value.trim() || "Guest";
+            userNameDisplay.textContent = userName;
+            resultUserNameDisplay.textContent = userName;
+            showPage('quiz-page');
+
+            totalMarksDisplay.textContent = quizData.length;
+            initializeQuestionNav();
+            loadQuestion(currentQuestionIndex);
+            startTotalTimer();
+        }
+
+        function initializeQuestionNav() {
+            questionNavList.innerHTML = '';
+            quizData.forEach((_, index) => {
+                const li = document.createElement('li');
+                li.textContent = index + 1;
+                li.classList.add('question-nav-item', `status-${questionStatus[index]}`);
+                li.dataset.index = index;
+                li.addEventListener('click', () => navigateToQuestion(index));
+                questionNavList.appendChild(li);
+            });
+             updateQuestionNavHighlight();
+        }
+
+        function updateQuestionNavHighlight() {
+             const items = questionNavList.querySelectorAll('.question-nav-item');
+             items.forEach((item, index) => {
+                 item.style.borderColor = '';
+                 item.style.borderWidth = '';
+                 if (index === currentQuestionIndex) {
+                     item.style.borderColor = '#007bff';
+                     item.style.borderWidth = '2px';
+                 }
+             });
+        }
+
+
+        function updateSingleQuestionNavStatus(index) {
+            const item = questionNavList.querySelector(`.question-nav-item[data-index="${index}"]`);
+            if (item) {
+                item.classList.remove('status-default', 'status-answered', 'status-unanswered', 'status-review', 'status-answered-review');
+                item.classList.add(`status-${questionStatus[index]}`);
+            }
+        }
+
+        function recordTimeSpent() {
+            if (questionViewStartTime !== null) {
+                const timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                if (timeElapsedThisVisit > 0) {
+                    timeSpentPerQuestion[currentQuestionIndex] += timeElapsedThisVisit;
+                }
+                questionViewStartTime = null;
+            }
+        }
+
+        function updateStatus(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let currentStatus = questionStatus[index];
+            let newStatus = currentStatus;
+
+            if (answered && reviewed) {
+                newStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                newStatus = 'answered';
+            } else if (!answered && reviewed) {
+                newStatus = 'review';
+            } else if (!answered && !reviewed) {
+                if (currentStatus === 'unanswered') {
+                    newStatus = 'unanswered';
+                } else if (currentStatus === 'default') {
+                     newStatus = 'default';
+                } else {
+                    newStatus = 'unanswered';
+                }
+            }
+
+            if (newStatus !== currentStatus) {
+                questionStatus[index] = newStatus;
+                updateSingleQuestionNavStatus(index);
+            }
+        }
+
+        function finalizeStatusOnLeave(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let finalStatus = questionStatus[index];
+
+            if (!answered && !reviewed) {
+                finalStatus = 'unanswered';
+            } else if (answered && reviewed) {
+                finalStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                finalStatus = 'answered';
+            } else if (!answered && reviewed) {
+                finalStatus = 'review';
+            }
+
+            if (finalStatus !== questionStatus[index]) {
+                questionStatus[index] = finalStatus;
+            }
+            updateSingleQuestionNavStatus(index);
+        }
+
+
+        function loadQuestion(index) {
+            const question = quizData[index];
+            currentQuestionNumberDisplay.textContent = `Question ${index + 1} of ${quizData.length}`;
+            questionText.textContent = question.question;
+
+            // --- NEW: Handle Image Display ---
+            imageContainer.innerHTML = ''; // Clear previous image
+            if (question.image) {
+                const imgElement = document.createElement('img');
+                imgElement.src = question.image;
+                imgElement.alt = `Image for question ${index + 1}`; // Add alt text
+                // Style applied via CSS now
+                imageContainer.appendChild(imgElement);
+            }
+            // --- END NEW ---
+
+            optionsList.innerHTML = '';
+            question.options.forEach((option, i) => {
+                const li = document.createElement('li');
+                const inputId = `q${index}_option${i}`;
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `question${index}`;
+                input.value = option;
+                input.id = inputId;
+                input.checked = userAnswers[index] === option;
+                input.addEventListener('change', () => {
+                    userAnswers[index] = option;
+                    updateStatus(index);
+                });
+
+                const label = document.createElement('label');
+                label.htmlFor = inputId;
+                label.textContent = option;
+
+                li.appendChild(input);
+                li.appendChild(label);
+                optionsList.appendChild(li);
+            });
+
+            prevButton.disabled = index === 0;
+            nextButton.textContent = index === quizData.length - 1 ? 'Submit' : 'Next';
+
+            reviewButton.textContent = markedForReview[index] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[index] ? '#5a32a3' : '#6f42c1';
+
+            questionViewStartTime = Date.now();
+            startQuestionTimer();
+
+            updateQuestionNavHighlight();
+
+            const questionAreaWrapper = document.querySelector('.question-area-wrapper');
+            if (questionAreaWrapper) questionAreaWrapper.scrollTop = 0;
+        }
+
+        function navigateToQuestion(index) {
+            if (index < 0 || index >= quizData.length || index === currentQuestionIndex) return;
+
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            currentQuestionIndex = index;
+            loadQuestion(currentQuestionIndex);
+        }
+
+        function handleNext() {
+             const leavingIndex = currentQuestionIndex;
+             recordTimeSpent();
+             finalizeStatusOnLeave(leavingIndex);
+
+             if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion(currentQuestionIndex);
+            } else {
+                submitQuiz();
+            }
+        }
+
+        function handlePrev() {
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            if (currentQuestionIndex > 0) {
+               currentQuestionIndex--;
+               loadQuestion(currentQuestionIndex);
+            }
+        }
+
+        function toggleReview() {
+            markedForReview[currentQuestionIndex] = !markedForReview[currentQuestionIndex];
+            updateStatus(currentQuestionIndex);
+            reviewButton.textContent = markedForReview[currentQuestionIndex] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[currentQuestionIndex] ? '#5a32a3' : '#6f42c1';
+        }
+
+
+        function startQuestionTimer() {
+            clearInterval(questionTimerInterval);
+
+            function updateTimerDisplay() {
+                let totalTimeSpentSoFar = timeSpentPerQuestion[currentQuestionIndex];
+                let timeElapsedThisVisit = 0;
+
+                if (questionViewStartTime) {
+                    timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                }
+
+                let currentTotalTime = totalTimeSpentSoFar + timeElapsedThisVisit;
+                let displayTime = Math.round(currentTotalTime);
+
+                questionTimerDisplay.classList.remove('red');
+
+                if (currentTotalTime > QUESTION_TIME_LIMIT) {
+                    let exceededTime = Math.round(currentTotalTime - QUESTION_TIME_LIMIT);
+                    questionTimerDisplay.textContent = `Exceeded: ${exceededTime}s`;
+                    questionTimerDisplay.classList.add('red');
+                } else {
+                     questionTimerDisplay.textContent = `Time: ${displayTime}s`;
+                }
+            }
+
+            updateTimerDisplay();
+            questionTimerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function startTotalTimer() {
+            clearInterval(totalTimerInterval);
+            let currentTime = totalTimeSeconds;
+
+            totalTimerInterval = setInterval(() => {
+                currentTime--;
+                if (currentTime <= 0) {
+                    clearInterval(totalTimerInterval);
+                    totalTimerDisplay.textContent = '00:00';
+                    alert("Time's up!");
+                    submitQuiz();
+                } else {
+                    const minutes = Math.floor(currentTime / 60);
+                    const seconds = currentTime % 60;
+                    totalTimerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function submitQuiz() {
+            recordTimeSpent();
+            finalizeStatusOnLeave(currentQuestionIndex);
+            clearInterval(questionTimerInterval);
+            clearInterval(totalTimerInterval);
+
+             questionStatus.forEach((status, index) => {
+                 if (index !== currentQuestionIndex) {
+                     finalizeStatusOnLeave(index);
+                 }
+             });
+
+            calculateResults();
+            showPage('results-page');
+        }
+
+        function calculateResults() {
+            let score = 0;
+            wrongUnansweredList.innerHTML = '';
+
+            quizData.forEach((question, index) => {
+                const isCorrect = userAnswers[index] === question.answer;
+                if (isCorrect) {
+                    score++;
+                }
+
+                if (questionStatus[index] === 'unanswered' || (userAnswers[index] !== null && !isCorrect)) {
+                    const resultItem = document.createElement('div');
+                    resultItem.classList.add('result-item');
+
+                    const qText = document.createElement('p');
+                    qText.classList.add('question');
+                    qText.innerHTML = `<strong>Q${index + 1}:</strong> ${question.question}`;
+                    resultItem.appendChild(qText);
+
+                    const yourAns = document.createElement('p');
+                    yourAns.innerHTML = `<strong>Your Answer:</strong> `;
+                    if (userAnswers[index] !== null) {
+                         yourAns.innerHTML += `<span class="your-answer">${userAnswers[index]}</span>`;
+                    } else {
+                         yourAns.innerHTML += `<span class="your-answer">Not Answered</span>`;
+                    }
+                     resultItem.appendChild(yourAns);
+
+
+                    const correctAns = document.createElement('p');
+                    correctAns.innerHTML = `<strong>Correct Answer:</strong> <span class="correct-answer">${question.answer}</span>`;
+                    resultItem.appendChild(correctAns);
+
+                    const explanation = document.createElement('p');
+                    explanation.classList.add('explanation');
+                    explanation.textContent = question.explanation;
+                    resultItem.appendChild(explanation);
+
+                    wrongUnansweredList.appendChild(resultItem);
+                }
+            });
+
+            scoreDisplay.textContent = score;
+            totalMarksDisplay.textContent = quizData.length;
+
+            setTimeout(generateTimeChart, 100);
+        }
+
+         function generateTimeChart() {
+            const ctx = timeChartCanvas.getContext('2d');
+             if (!ctx) {
+                console.error("Failed to get canvas context for time chart.");
+                return;
+            }
+            const labels = quizData.map((_, index) => `Q${index + 1}`);
+            const data = timeSpentPerQuestion.map(time => Math.round(time));
+
+            const normalColor = 'rgba(0, 123, 255, 0.3)';
+            const exceededColor = 'rgba(220, 53, 69, 0.3)';
+            const normalBorder = 'rgba(0, 123, 255, 1)';
+            const exceededBorder = 'rgba(220, 53, 69, 1)';
+
+            if (timeChart) {
+                timeChart.destroy();
+            }
+
+            try {
+                timeChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Time Spent (seconds)',
+                                data: data,
+                                fill: true,
+                                tension: 0.3,
+                                segment: {
+                                    borderColor: ctx => (ctx.p1.parsed.y > QUESTION_TIME_LIMIT) ? exceededBorder : normalBorder,
+                                    backgroundColor: ctx => {
+                                        const y1 = ctx.p0.parsed.y;
+                                        const y2 = ctx.p1.parsed.y;
+                                        return (y1 > QUESTION_TIME_LIMIT || y2 > QUESTION_TIME_LIMIT) ? exceededColor : normalColor;
+                                    }
+                                },
+                                 pointBackgroundColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+                                 pointBorderColor: '#fff',
+                                 pointHoverBackgroundColor: '#fff',
+                                 pointHoverBorderColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+
+                            },
+                            {
+                                type: 'line',
+                                label: `${QUESTION_TIME_LIMIT}s Threshold`,
+                                data: Array(quizData.length).fill(QUESTION_TIME_LIMIT),
+                                borderColor: 'rgba(220, 53, 69, 0.8)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Time (seconds)'
+                                }
+                            },
+                            x: {
+                                 title: {
+                                    display: true,
+                                    text: 'Question Number'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.datasetIndex === 1) return null;
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) label += context.parsed.y + 's';
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                         interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                    }
+                });
+            } catch (error) {
+                console.error("Chart.js error:", error);
+            }
+        }
+
+        // --- Event Listeners ---
+        startQuizButton.addEventListener('click', startQuiz);
+        prevButton.addEventListener('click', handlePrev);
+        nextButton.addEventListener('click', handleNext);
+        reviewButton.addEventListener('click', toggleReview);
+
+         nameInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                startQuizButton.click();
+            }
+        });
+
+        // --- Initial Setup ---
+        showPage('landing-page');
+
+    </script>
+
+</body>
+</html>

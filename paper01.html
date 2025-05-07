@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supreme HTML Quiz</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        /* ... (your existing CSS rules) ... */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars on body */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: #f0f2f5;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quiz-container, .landing-container, .results-container {
+            background-color: #ffffff;
+            overflow: hidden;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .landing-container, .results-container {
+            padding: 30px;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        .results-container {
+            justify-content: flex-start; /* Align results content to top */
+        }
+
+
+        .landing-container h1, .results-container h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2em;
+            font-weight: 600;
+            margin-top: 0;
+        }
+
+        .landing-container input[type="text"] {
+            padding: 10px 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80%;
+            max-width: 300px;
+            font-size: 1em;
+        }
+
+        .start-button, .nav-button, .review-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            margin: 5px;
+            font-weight: 500;
+        }
+
+        .start-button:hover, .nav-button:hover, .review-button:hover {
+            background-color: #0056b3;
+        }
+
+        .quiz-header {
+            background-color: #343a40;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            height: 48px; /* Fixed height */
+            box-sizing: border-box;
+        }
+
+        .quiz-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .user-info {
+            font-size: 0.95em;
+        }
+
+        .quiz-body {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            height: calc(100vh - 48px); /* Full height minus header */
+        }
+
+        .question-nav {
+            width: 200px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            flex-shrink: 0;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .question-nav h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .question-nav-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(35px, 1fr));
+            gap: 8px;
+        }
+
+        .question-nav-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 35px;
+            height: 35px;
+            border: 1px solid #adb5bd;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: normal;
+            background-color: #ffffff;
+            color: #495057;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            position: relative;
+            font-size: 0.9em;
+        }
+
+        .question-nav-item:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Status Colors */
+        .question-nav-item.status-default { background-color: #ffffff; color: #495057; border-color: #adb5bd;} /* White */
+        .question-nav-item.status-answered { background-color: #28a745; color: white; border-color: #218838; } /* Green */
+        .question-nav-item.status-unanswered { background-color: #dc3545; color: white; border-color: #c82333; } /* Red */
+        .question-nav-item.status-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple */
+        .question-nav-item.status-answered-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple + Green Dot */
+
+        /* Green dot for answered and reviewed */
+        .question-nav-item.status-answered-review::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 7px;
+            height: 7px;
+            background-color: #28a745; /* Green dot */
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+
+
+        .main-content {
+            flex-grow: 1;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            /* justify-content: space-between; REMOVED - Let content flow naturally */
+            overflow-y: auto; /* Allow scrolling for the whole main area */
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .timers {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1em;
+            font-weight: 500;
+            color: #495057;
+            flex-shrink: 0;
+        }
+
+        .timer {
+            background-color: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+        .timer.red {
+            color: #dc3545;
+            border-color: #dc3545;
+            font-weight: 600;
+        }
+
+        .question-area-wrapper { /* Wrapper for question and options */
+             /* Allow this area to take up available space before buttons */
+             flex-grow: 1;
+             margin-bottom: 20px; /* Space before buttons */
+             /* Removed overflow-y: auto; let main-content handle scrolling */
+        }
+
+        .question-text {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: #212529;
+            font-weight: 500;
+        }
+
+        /* --- NEW: Image Container Styling --- */
+        #question-image-container {
+             margin-bottom: 20px; /* Space between image and options */
+             text-align: center; /* Center the image */
+        }
+        #question-image-container img {
+             max-width: 100%; /* Make image responsive */
+             height: auto;    /* Maintain aspect ratio */
+             max-height: 300px; /* Optional: Limit max height */
+             border-radius: 4px; /* Optional: Rounded corners */
+             box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: Slight shadow */
+        }
+         /* --- END NEW --- */
+
+        .options {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .options li {
+            margin-bottom: 10px;
+        }
+
+        .options label {
+            display: block;
+            background-color: #f8f9fa;
+            border: 1px solid #ced4da;
+            padding: 12px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            font-size: 1em;
+            font-weight: normal;
+        }
+
+        .options input[type="radio"] {
+            margin-right: 10px;
+            display: none;
+        }
+
+         .options label:hover {
+             background-color: #e2e6ea;
+             border-color: #adb5bd;
+         }
+
+        .options input[type="radio"]:checked + label {
+            background-color: #cfe2ff;
+            border-color: #007bff;
+            font-weight: 500;
+            color: #0056b3;
+        }
+
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            /* margin-top: auto; REMOVED - Let it sit naturally at the bottom */
+            flex-shrink: 0; /* Prevent buttons area from shrinking */
+        }
+
+        .nav-button.prev { background-color: #ffc107; color: #212529;}
+        .nav-button.prev:hover { background-color: #e0a800; }
+        .review-button { background-color: #6f42c1; }
+        .review-button:hover { background-color: #5a32a3; }
+        .nav-button.next { background-color: #28a745; }
+        .nav-button.next:hover { background-color: #218838; }
+        .nav-button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .nav-button.submit { background-color: #dc3545; }
+        .nav-button.submit:hover { background-color: #c82333; }
+
+
+        /* Results Page Specifics */
+        .results-content {
+             width: 100%;
+             max-width: 900px;
+             margin: 0 auto;
+             padding: 20px 0;
+        }
+
+        .score-card {
+            background-color: #e6f7ff;
+            border: 1px solid #007bff;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+        }
+        .score-card h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #0056b3;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        .score-card p {
+            font-size: 1.2em;
+            font-weight: 500;
+            color: #343a40;
+            margin: 5px 0;
+        }
+
+        .results-section {
+            margin-bottom: 25px;
+            text-align: left;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        .results-section h3 {
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .result-item {
+            border-bottom: 1px dashed #ced4da;
+            padding: 12px 0;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-item p {
+            margin: 4px 0;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+        .result-item .question { font-weight: 600; color: #343a40; }
+        .result-item .your-answer { color: #dc3545; font-weight: 500;}
+        .result-item .correct-answer { color: #28a745; font-weight: 500;}
+        .result-item .explanation { font-style: normal; color: #6c757d; margin-top: 8px; font-size: 0.95em;}
+
+        .time-analysis {
+             padding: 15px;
+             background-color: #f8f9fa;
+             border: 1px solid #dee2e6;
+             border-radius: 5px;
+             margin-bottom: 20px;
+        }
+        .time-analysis h3 {
+             color: #495057;
+             border-bottom: 1px solid #dee2e6;
+             padding-bottom: 8px;
+             margin-bottom: 15px;
+             text-align: left;
+             font-size: 1.2em;
+             font-weight: 600;
+        }
+        #timeChart {
+            max-height: 350px;
+            width: 100% !important;
+        }
+
+        /* Hide elements */
+        .hidden {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Landing Page -->
+    <div id="landing-page" class="landing-container">
+        <h1>Welcome Rika!</h1>
+        <input type="text" id="name-input" placeholder="Want to Change your Name?">
+        <br>
+        <button id="start-quiz-button" class="start-button">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Page -->
+    <div id="quiz-page" class="quiz-container hidden">
+        <div class="quiz-header">
+            <h1>Oswal 360 Physics 1</h1>
+            <div class="user-info">
+                <span>Name: <span id="user-name"></span></span> |
+                <span>Total Time Left: <span id="total-timer">50:00</span></span>
+            </div>
+        </div>
+        <div class="quiz-body">
+            <div class="question-nav">
+                <h3>Question Palette</h3>
+                <ul id="question-nav-list" class="question-nav-list">
+                    <!-- Question numbers will be dynamically added here -->
+                </ul>
+            </div>
+            <div class="main-content">
+                <!-- Top content wrapper -->
+                <div class="timers">
+                    <span id="current-question-number">Question X of Y</span>
+                    <span class="timer" id="question-timer">Time: 1s</span>
+                </div>
+                <!-- Scrollable question area -->
+                <div class="question-area-wrapper">
+                    <p id="question-text" class="question-text">Question text goes here...</p>
+                    <!-- === NEW: Image container === -->
+                    <div id="question-image-container"></div>
+                    <!-- === END NEW === -->
+                    <ul id="options-list" class="options">
+                        <!-- Options will be dynamically added here -->
+                    </ul>
+                </div>
+                 <!-- Navigation buttons at the bottom -->
+                <div class="navigation-buttons">
+                    <button id="prev-button" class="nav-button prev">Previous</button>
+                    <button id="review-button" class="review-button">Mark for Review</button>
+                    <button id="next-button" class="nav-button next">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Page -->
+    <div id="results-page" class="results-container hidden">
+       <div class="results-content">
+            <h1>Quiz Results</h1>
+            <div id="score-card" class="score-card">
+                <h2>Score</h2>
+                <p><span id="score">0</span> / <span id="total-marks">0</span></p>
+                 <p>Well done, <span id="result-user-name">User</span>!</p>
+            </div>
+
+            <div id="wrong-unanswered-list" class="results-section">
+                <h3>Review Incorrect & Unanswered Questions</h3>
+                <!-- Incorrect/Unanswered questions will be added here -->
+            </div>
+
+            <div class="time-analysis">
+                 <h3>Time Analysis Per Question</h3>
+                <canvas id="timeChart"></canvas>
+            </div>
+             <button onclick="window.location.reload();" class="start-button">Restart Quiz</button>
+        </div>
+    </div>
+
+<script>
+    const quizData = [
+        {
+            question: "The surface considered for Gauss’s law is:-",
+            options: ["Closed surface", "Spherical surface", "Gaussian surface", "Plane surface"],
+            answer: "Gaussian surface",
+            explanation: "Explanation for Question 1: Gauss's law uses a hypothetical closed surface, called a Gaussian surface, to calculate electric flux."
+        },
+        {
+            question: "The property which differentiates the two kinds of charges is called the ____ of charge",
+            options: ["Motion", "Strength", "Sign", "Polarity"],
+            answer: "Polarity",
+            explanation: "Explanation for Question 2: Charges are differentiated by their polarity, which is either positive or negative."
+        },
+        {
+            question: "The SI unit of electric flux is:-",
+            options: ["NC-1m-2", "NC m-2", "NC-2m-2", "Nm2C-1"],
+            answer: "Nm2C-1",
+            explanation: "Explanation for Question 3: Electric flux is the product of electric field and area (Φ = E⋅A). The unit of electric field is N/C and area is m². So the unit of flux is (N/C)m² = Nm²/C or Nm²C⁻¹."
+        },
+        {
+            question: "Consider the charge configuration and a spherical Gaussian surface as shown in fig. when calculating the flux of the electric field our the spherical surface electric field will be due to:-",
+            options: ["q2", "Only the positive charge", "all the charges", "+q, & -q"],
+            answer: "all the charges",
+            explanation: "Explanation for Question 4: When calculating electric flux using Gauss's law, the electric field E in the integral ∫ E⋅dA is the total electric field at the surface due to ALL charges, both inside and outside the Gaussian surface. The flux itself, however, depends only on the enclosed charge.",
+            image: "paper01q04.png"
+        },
+        {
+            question: "What is the electric flux due to given configuration through the surface “S”?",
+            options: ["Zero", "q/ε₀", "-q/ε₀", "2q/ε₀"],
+            answer: "q/ε₀",
+            explanation: "Explanation for Question 5: According to Gauss's law, the total electric flux through a closed surface is equal to the net charge enclosed by the surface divided by the permittivity of free space (Φ = Q_enclosed / ε₀). If the surface encloses a charge q, the flux is q/ε₀.",
+            image: "paper01q05.png"
+        },
+        {
+            question: "Force between two charges is 200 N. What is the force b/w if their charges are halved & distance between then is doubled?",
+            options: ["50 N", "100 N", "150 N", "200 N"],
+            answer: "50 N",
+            explanation: "Explanation for Question 6: According to Coulomb's Law, force F is proportional to (q1*q2)/r². If charges are halved (q/2) and distance is doubled (2r), the new force is proportional to ((q/2)*(q/2))/(2r)² = (q²/4)/(4r²) = q²/(16r²), which is 1/16th of the original force. (200 N / 16 = 12.5 N). However, based on the provided answer key (A: 50N), it suggests the question might have intended only the distance to be doubled (F' = F/(2r)²/r² = F/4 = 200/4 = 50N). We follow the answer key provided.",
+        },
+        {
+            question: "At what angle between dipole moment (p) and electric field (E) the torque is maximum?",
+            options: ["90˚", "0˚", "45˚", "60˚"],
+            answer: "90˚",
+            explanation: "Explanation for Question 7: The torque on an electric dipole in a uniform electric field is given by τ = pE sinθ, where θ is the angle between the dipole moment (p) and the electric field (E). Torque is maximum when sinθ is maximum, which occurs at θ = 90°."
+        },
+        {
+            question: "_________ force is one of the fundamental forces of nature.",
+            options: ["Electromagnetic", "Weak", "Nuclear", "None of these"],
+            answer: "Electromagnetic",
+            explanation: "Explanation for Question 8: The electromagnetic force is one of the four fundamental forces of nature, along with the strong nuclear force, weak nuclear force, and gravitational force."
+        },
+        {
+            question: "A point charge is place at centre of the spherical Gaussian surface. How will the electric flux change if its radius is doubled?",
+            options: ["Become half", "Remains same", "Become double", "Becomes ¼th"],
+            answer: "Remains same",
+            explanation: "Explanation for Question 9: According to Gauss's law, the total electric flux through a closed surface depends only on the net charge enclosed within the surface, not on the size or shape of the surface. Since the enclosed charge remains the same, the electric flux remains the same even if the radius is doubled."
+        },
+        {
+            question: "Metals, human and animal bodies and earth are ______",
+            options: ["Living things", "Insulators", "Conductors", "Dielectrics"],
+            answer: "Conductors",
+            explanation: "Explanation for Question 10: Conductors are materials that allow electric charge to flow easily through them. Metals, human/animal bodies, and the Earth are good conductors of electricity."
+        },
+        {
+            question: "Most of the non-metals like glass, porcelain, plastic, nylon, wood offer _____ resistance to the passage of electricity through them.",
+            options: ["Zero", "Very Small", "Low", "High"],
+            answer: "High",
+            explanation: "Explanation for Question 11: Non-metals generally act as insulators, offering high resistance to the flow of electric current."
+        },
+        {
+            question: "(Placeholder for missing question text/figure)",
+            options: ["Zero", "q/ε₀", "-q/ε₀", "None of these"],
+            answer: "-q/ε₀",
+            explanation: "Explanation for Question 12: Cannot fully explain without the question context, but the answer -q/ε₀ suggests the calculation of electric flux through a Gaussian surface enclosing a net charge of -q, based on Gauss's law.",
+            image: "paper01q12.png"
+        },
+        {
+            question: "(Placeholder for missing question text/figure)",
+            options: ["maximum", "E=0", "Zero", "None of these"],
+            answer: "maximum",
+            explanation: "Explanation for Question 13: Cannot fully explain without the question context. The answer 'maximum' might refer to the electric field or potential at a specific point or in a certain configuration.",
+            image: "paper01q13.png"
+        },
+        {
+            question: "S1 & S2 are two concentric spheres enclosing charges Q & 2Q respectively. What is the ratio of flux through S1 & S2?",
+            options: ["1:3", "2:1", "1:4", "3:1"],
+            answer: "1:3",
+            explanation: "Explanation for Question 14: Flux through S1 (enclosing Q) is Φ₁ = Q/ε₀. Flux through S2 (enclosing Q and 2Q) is Φ₂ = (Q + 2Q)/ε₀ = 3Q/ε₀. The ratio Φ₁ : Φ₂ is (Q/ε₀) : (3Q/ε₀) = 1:3."
+        },
+        {
+            question: "What is the correct expression for electric field due to electric dipole at equitorial axis (point)?",
+            options: ["E = p / (4πε₀r³)", "E = -p / (4πε₀r³)", "E = 2p / (4πε₀r³)", "E = -2p / (4πε₀r³)"],
+            answer: "E = p / (4πε₀r³)",
+            explanation: "Explanation for Question 15: The magnitude of the electric field due to a short electric dipole at a distant point on the equatorial line is E = p / (4πε₀r³). The direction is opposite to the dipole moment.",
+            image: "paper01a15.png"
+        },
+        {
+            question: "What is the net force on electric dipole in electric field?",
+            options: ["qE", "2qE", "± qE", "Zero"],
+            answer: "Zero",
+            explanation: "Explanation for Question 16: In a uniform electric field, the forces on the positive and negative charges of an electric dipole are equal in magnitude and opposite in direction, resulting in a net force of zero. There is a net torque, but no net force."
+        },
+        {
+            question: "Total electric charge on an electron is -",
+            options: ["2.6 × 10-19C", "1.6 × 10-19C", "3.2 × 10-7C", "6.4 × 10-7NC-1"],
+            answer: "1.6 × 10-19C",
+            explanation: "Explanation for Question 17: The magnitude of the elementary charge, which is the charge of a proton or electron, is approximately 1.602 × 10⁻¹⁹ C. The charge of an electron is -1.602 × 10⁻¹⁹ C. Option B provides the correct magnitude.",
+        },
+        {
+            question: "If a particle moves opposite to the direction of electric field, then the particle is",
+            options: ["uncharged", "Positively charged", "Negatively charged", "None of the above"],
+            answer: "Negatively charged",
+            explanation: "Explanation for Question 18: The force on a charge q in an electric field E is F = qE. If a particle moves opposite to the field direction, the force must be opposite to the field. This happens when q is negative (F = (-ve)E, force is opposite to E)."
+        },
+        {
+            question: "What is the dimensional formula for permittivity of free space?",
+            options: ["[M-1L-3T4A2]", "[ML-2T3A]", "[M-1L2T3A]", "[M-1L2T2A-1]"],
+            answer: "[M-1L-3T4A2]",
+            explanation: "Explanation for Question 19: From Coulomb's Law F = (1/4πε₀) q1q2/r², the dimensions of ε₀ are [Charge²] / ([Force] [Length²]) = [AT]² / ([MLT⁻²] [L²]) = [A²T²] / [ML³T⁻²] = [M⁻¹L⁻³T⁴A²]."
+        },
+        {
+            question: "If a body is charged by rubbing it, its weight",
+            options: ["Remians precisely constant", "Increased slightly", "Decreases slightly", "May increase or decrease slightly"],
+            answer: "Increased slightly",
+            explanation: "Explanation for Question 20: Charging by rubbing involves the transfer of electrons. If the body gains electrons (becomes negatively charged), its mass and thus weight increase slightly. If it loses electrons (becomes positively charged), its mass and weight decrease slightly. The provided answer key suggests a specific outcome (increase), implying the body gained electrons, although generally it could increase or decrease.",
+        },
+        {
+            question: "Mark the correct option",
+            options: ["Gausses' law is valid only for symmetrical charge distributions", "Gauss's law is valid only for charge food in vaccum", "The electric field calculated by gauss's law is the field due to charges inside gaussian surface", "All the above"],
+            answer: "The electric field calculated by gauss's law is the field due to charges inside gaussian surface",
+            explanation: "Explanation for Question 21: Gauss's law is valid for any closed surface and any charge distribution (A is false). It's valid in any medium (B is false). The electric field E in Gauss's law is the total field from all charges. Option C is poorly worded but is likely the intended correct answer in the context of typical MCQs, implying that when applying Gauss's law to calculate E for symmetric distributions, we relate the flux of the total field to the enclosed charge.",
+        },
+        {
+            question: "Field lines start from positive charges and end at negative charges. If there is a single charge, they may start or end at ____",
+            options: ["Zero", "origin", "Close to infinity", "Infinity"],
+            answer: "Infinity",
+            explanation: "Explanation for Question 22: Electric field lines for an isolated positive charge extend radially outward to infinity, and for an isolated negative charge, they extend radially inward from infinity."
+        },
+        {
+            question: "Electrostatic field lines do not form any closed loops. This follows from the conservative nature of _____",
+            options: ["Charge", "Force", "Potential", "Electric Field"],
+            answer: "Electric Field",
+            explanation: "Explanation for Question 23: The conservative nature of the electrostatic field means that the work done by the field on a charge moving in a closed path is zero (∫ E⋅dl = 0). This is a fundamental property that implies field lines cannot form closed loops."
+        },
+        {
+            question: "Unit of electric flux is N C–1 m2",
+            options: ["True", "False", "May be True or False", "None of these"],
+            answer: "True",
+            explanation: "Explanation for Question 24: The unit of electric flux is Nm²/C. NC⁻¹m² is the same as Nm²/C. So the statement is true."
+        },
+        {
+            question: "Here",
+            options: ["Power", "Electric Field intensity", "Work done", "Electric Potential"],
+            answer: "Electric Field intensity",
+            explanation: "Explanation for Question 25: Cannot provide a specific explanation without the question and formula options. The answer is given as option B based on the key.",
+            image: "paper01q25.png"
+        },
+        {
+            question: "Net electric field at the center of a uniformly charge circular ring is",
+            options: ["zero", "Infinity", "λ / 2πε₀r", "σ / ε₀"],
+            answer: "zero",
+            explanation: "Explanation for Question 26: For a uniformly charged circular ring, the electric field contributions from charge elements on opposite sides of the ring at the center cancel each other out due to symmetry. Therefore, the net electric field at the center is zero."
+        },
+        {
+            question: "Water molecules, H2O, is an example of",
+            options: ["Non-Polar molecules", "Charges", "Polar molecules", "None of these"],
+            answer: "Polar molecules",
+            explanation: "Explanation for Question 27: Water molecules have a bent shape and unequal sharing of electrons between oxygen and hydrogen atoms, resulting in a permanent electric dipole moment. This makes water a polar molecule."
+        },
+        {
+            question: "The direction of electric field at axial point of electric dipole:-",
+            options: ["same as that of dipole moment", "opposite to that of its dipole moment", "Can be same or opposite", "Above of these"],
+            answer: "same as that of dipole moment",
+            explanation: "Explanation for Question 28: At a point on the axis of an electric dipole, the electric field due to the dipole is directed along the axis. For points outside the dipole on the axis, the net field is generally in the same direction as the dipole moment (from -q to +q)."
+        },
+        {
+            question: "Direction of electric field is always opposite to that of ____",
+            options: ["Force", "Current", "Dipole moment", "Potential"],
+            answer: "Dipole moment",
+            explanation: "Explanation for Question 29: This statement is not universally true. The electric field at the equatorial line of a dipole is opposite to the dipole moment, but at axial points, it is in the same direction. The key indicates 'Dipole moment' (C) is the intended answer, suggesting it refers to a specific case or a simplified context."
+        },
+        {
+            question: "The units for Surface charge density is-",
+            options: ["Cm", "C/m^3", "C/m", "C/m^2"],
+            answer: "C/m^2",
+            explanation: "Explanation for Question 30: Surface charge density is defined as charge per unit area. The SI unit for charge is Coulomb (C) and for area is meter squared (m²). Thus, the unit is C/m²."
+        },
+        {
+            question: "The charge on an electron was calculated by",
+            options: ["Faraday", "J. J Thomson", "Millikan", "Einstein"],
+            answer: "Millikan",
+            explanation: "Explanation for Question 31: Robert Millikan determined the magnitude of the elementary electric charge (the charge of a single electron) through his famous oil drop experiment."
+        },
+        {
+            question: "A method for charging a conductor without bringing a charged body in contact with it is called",
+            options: ["Conduction", "Heating", "Electrostatic induction", "Radiation"],
+            answer: "Electrostatic induction",
+            explanation: "Explanation for Question 32: Electrostatic induction is a method of charging an object without direct contact. It involves bringing a charged object near a conductor, causing a separation of charges in the conductor."
+        },
+        {
+            question: "How much positive and negative charge is there in a cup of water?",
+            options: ["Zero", "6.44 × 10^7 C", "4.34 × 10^7 C", "1.34 × 10^7 C"],
+            answer: "1.34 × 10^7 C",
+            explanation: "Explanation for Question 33: A cup (approx 250g) of water (H₂O) contains roughly (250/18) moles of molecules. Each molecule has 10 protons and 10 electrons. Total positive charge = (moles * Avogadro's number * protons per molecule * elementary charge) ≈ (250/18) * 6.022e23 * 10 * 1.602e-19 C ≈ 1.34 x 10⁷ C. The total negative charge has the same magnitude."
+        },
+        {
+            question: "Two point charges q1 and q2 , of magnitude +10–8C and –10–8 C, respectively, are placed 0.1 m apart. Calculate the electric fields at its centre",
+            options: ["10^4 N C–1", "7.2 × 104 N C–1", "5 x 104 N C–1", "Zero"],
+            answer: "7.2 × 104 N C–1",
+            explanation: "Explanation for Question 34: At the midpoint (0.05m from each charge), the electric field due to the positive charge points away from it, and the field due to the negative charge points towards it. Both fields are in the same direction (from + to -). Total field E = E₁ + E₂ = k|q₁|/r² + k|q₂|/r² = 2 * k * (10⁻⁸ C) / (0.05 m)² = 2 * (9x10⁹) * 10⁻⁸ / 0.0025 = 180 / 0.0025 = 72000 N/C = 7.2 x 10⁴ N/C."
+        },
+        {
+            question: "The constant k in coulomb’s law depends on",
+            options: ["nature of medium", "Distance of separation", "Charge", "None of These"],
+            answer: "nature of medium",
+            explanation: "Explanation for Question 35: The constant k in Coulomb's law is given by k = 1/(4πε), where ε is the permittivity of the medium. Permittivity varies depending on the material medium between the charges."
+        },
+        {
+            question: "Ratio of electric force and gravitational force between a proton and an electron is:",
+            options: ["2.4 × 1039", "2.4 × 1036", "2.4 × 1034", "2.4 × 1042"],
+            answer: "2.4 × 1039",
+            explanation: "Explanation for Question 36: The ratio of electrostatic force (F_e) to gravitational force (F_g) between a proton and an electron is F_e/F_g = (k|q_p q_e|/r²) / (G m_p m_e/r²) = k|q_p q_e| / (G m_p m_e). Plugging in values for k, G, charges, and masses gives a ratio approximately 2.27 x 10³⁹, which is closest to 2.4 x 10³⁹."
+        },
+        {
+            question: "Consider three charges q1 , q2 , q3 each equal to q on the vertices of an equilateral triangle of side l. What is the force on charge Q placed at the centroid of the triangle?",
+            options: ["3Qq/4πεl²", "2Qq/4πεl²", "Qq/2πεl²", "Zero"],
+            answer: "Zero",
+            explanation: "Explanation for Question 37: The centroid of an equilateral triangle is equidistant from the vertices. The forces on the charge Q at the centroid due to the equal charges q at the vertices are equal in magnitude. Since these forces are directed radially outwards from the centroid to the vertices and make 120° angles with each other, their vector sum is zero."
+        },
+        {
+            question: "Two point charges qA = 3 µC and qB = –3 µC are located 20 cm apart in vacuum, what is the electric field at mid-point",
+            options: ["6.6 x 10^6 N/C", "5 x 10^7 N/C", "5.4×10^6 N/C", "Zero"],
+            answer: "5.4×10^6 N/C",
+            explanation: "Explanation for Question 38: At the midpoint (0.1 m from each charge), the field due to +3µC is E₁ = k(3µC)/(0.1m)² away from qA. The field due to -3µC is E₂ = k|-3µC|/(0.1m)² towards qB. Both fields are in the same direction. Total field E = E₁ + E₂ = 2 * (9x10⁹ Nm²/C²) * (3x10⁻⁶ C) / (0.1 m)² = 2 * 9e9 * 3e-6 / 0.01 = 54e3 / 1e-2 = 54e5 = 5.4 x 10⁶ N/C."
+        },
+        {
+            question: "Electric field lines provide information about",
+            options: ["field strength", "Direction", "Nature of charge", "All of these"],
+            answer: "All of these",
+            explanation: "Explanation for Question 39: The density of field lines indicates the strength of the field, the arrows on the lines show the direction of the field, and the origin/end points of lines indicate the nature of charges (start from positive, end at negative)."
+        },
+        {
+            question: "Dimensional formula for volume charge density is",
+            options: ["[L–2 TA]", "[L–3 TA]", "[L–1 TA]", "[L TA]"],
+            answer: "[L–3 TA]",
+            explanation: "Explanation for Question 40: Volume charge density (ρ) is charge per unit volume. Dimensions are [Charge] / [Volume] = [AT] / [L³] = [L⁻³TA]."
+        },
+        {
+            question: "Electric charge is a ______ quantity",
+            options: ["Vector", "Not enough info", "True", "None of these"],
+            answer: "True",
+            explanation: "Explanation for Question 41: The options are unusual for this question. Electric charge is a scalar quantity. Option C ('True') does not represent a type of quantity. Based on the provided answer key, 'True' is considered correct, implying the question was likely intended to be a True/False statement, although the statement itself is missing or flawed.",
+        },
+        {
+            question: "Match the following and find the correction option",
+            options: ["A - q, B - r, C - p", "A - p, B - r, C - p", "A - r, B - p, C - q", "A - r, B - q, C - p"],
+            answer: "A - q, B - r, C - p",
+            explanation: "Explanation for Question 42: Cannot provide a specific explanation without the matching list (A, B, C items and p, q, r items). The answer is given as option A based on the key.",
+            image: "paper01q42.png"
+        },
+        {
+            question: "Electric potential due to a point charge is proportional to",
+            options: ["r", "1/r", "1/r^2", "Independent of r"],
+            answer: "1/r",
+            explanation: "Explanation for Question 43: The electric potential (V) due to a point charge q at a distance r is given by V = kq/r. Thus, V is directly proportional to 1/r."
+        },
+        {
+            question: "What is effect on potential due to point charge if distance is doubled",
+            options: ["It becomes half", "It doubles", "It becomes 1/4th", "No change is observed"],
+            answer: "It becomes half",
+            explanation: "Explanation for Question 44: Since potential V is proportional to 1/r, if the distance r is doubled to 2r, the new potential V' will be proportional to 1/(2r) = (1/2) * (1/r). So, the potential becomes half of the original potential."
+        },
+        {
+            question: "Electrostatic potential due to electric dipole is given by",
+            options: ["± R / (4πε₀r²)", "R / (4πε₀r²)", "± 2R / (4πε₀r²)", "2R / (4πε₀r)"],
+            answer: "± R / (4πε₀r²)",
+            explanation: "Explanation for Question 45: The electric potential due to an electric dipole at a point (r, θ) relative to the dipole center is V = (p cosθ) / (4πε₀r²), where p is the dipole moment, r is the distance, and θ is the angle between the dipole moment and the position vector."
+        },
+        {
+            question: "Determine the electrostatic potential energy of a system consisting of two charges 7μc & -2μc placed at (-9 cm, 0, 0) & (9cm, 0, 0) respectively",
+            options: ["-1.4J", "0.7J", "-0.7J", "1.4J"],
+            answer: "-1.4J",
+            explanation: "Explanation for Question 46: The distance between the charges is 9 cm - (-9 cm) = 18 cm = 0.18 m. The potential energy U = k q₁q₂/r = (9x10⁹ Nm²/C²) * (7x10⁻⁶ C) * (-2x10⁻⁶ C) / (0.18 m) = (9e9 * 7e-6 * -2e-6) / 0.18 = -126e-3 / 0.18 = -0.126 / 0.18 = -0.7 J. Based on the provided key, the answer is -1.4J, which differs from the calculated value. We provide the answer from the key as requested.",
+        },
+        {
+            question: "An electric dipole has a dipole moment of 2 × 10-9 Cm, find electric potential at a point distant 0.3m from outer of dipole situated on line making angle 60° with dipole axis.",
+            options: ["100V", "150V", "250V", "350V"],
+            answer: "100V",
+            explanation: "Explanation for Question 47: Potential V = (k p cosθ) / r² = (9x10⁹ Nm²/C²) * (2x10⁻⁹ Cm) * cos(60°) / (0.3 m)² = (18 * 0.5) / 0.09 = 9 / 0.09 = 100 V."
+        },
+        {
+            question: "For any charge configuration, equipotential surface through a point is normal to the electric field at that point",
+            options: ["True", "False", "May be True or False", "None of these"],
+            answer: "True",
+            explanation: "Explanation for Question 48: This is a fundamental property of electric fields and equipotential surfaces. The electric field represents the direction of the greatest decrease in potential, which is always perpendicular to the surface where the potential is constant (equipotential surface)."
+        },
+        {
+            question: "A dielectric substance is a",
+            options: ["Conductor", "Insulator", "Semiconductor", "None of these"],
+            answer: "Insulator",
+            explanation: "Explanation for Question 49: Dielectric substances are electrical insulators that can be polarized when placed in an electric field. They do not conduct electricity readily."
+        },
+        {
+            question: " Capacitor is a system of two conductors separated by",
+            options: ["Insulator", "Water", "Semiconductor", "Conductor"],
+            answer: "Insulator",
+            explanation: "Explanation for Question 50: A capacitor consists of two conductive plates separated by a dielectric material, which is an insulator. The insulator prevents charge from flowing directly between the plates."
+        }
+    ];
+    
+
+        // --- State Variables ---
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(quizData.length).fill(null);
+        let questionStatus = new Array(quizData.length).fill('default');
+        let markedForReview = new Array(quizData.length).fill(false);
+        let timeSpentPerQuestion = new Array(quizData.length).fill(0);
+        let questionTimerInterval;
+        let totalTimerInterval;
+        let questionViewStartTime = null;
+        let totalTimeSeconds = 50 * 60;
+        let userName = "";
+        let timeChart = null;
+        const QUESTION_TIME_LIMIT = 45;
+
+        // --- DOM Elements ---
+        const landingPage = document.getElementById('landing-page');
+        const quizPage = document.getElementById('quiz-page');
+        const resultsPage = document.getElementById('results-page');
+        const nameInput = document.getElementById('name-input');
+        const startQuizButton = document.getElementById('start-quiz-button');
+        const userNameDisplay = document.getElementById('user-name');
+        const resultUserNameDisplay = document.getElementById('result-user-name');
+        const totalTimerDisplay = document.getElementById('total-timer');
+        const questionNavList = document.getElementById('question-nav-list');
+        const currentQuestionNumberDisplay = document.getElementById('current-question-number');
+        const questionTimerDisplay = document.getElementById('question-timer');
+        const questionText = document.getElementById('question-text');
+        const optionsList = document.getElementById('options-list');
+        const prevButton = document.getElementById('prev-button');
+        const reviewButton = document.getElementById('review-button');
+        const nextButton = document.getElementById('next-button');
+        const scoreDisplay = document.getElementById('score');
+        const totalMarksDisplay = document.getElementById('total-marks');
+        const wrongUnansweredList = document.getElementById('wrong-unanswered-list');
+        const timeChartCanvas = document.getElementById('timeChart');
+        const imageContainer = document.getElementById('question-image-container'); // <-- Get image container
+
+        // --- Functions ---
+
+        function showPage(pageId) {
+            landingPage.classList.add('hidden');
+            quizPage.classList.add('hidden');
+            resultsPage.classList.add('hidden');
+            const pageToShow = document.getElementById(pageId);
+            if (pageToShow) {
+                pageToShow.classList.remove('hidden');
+            }
+        }
+
+        function startQuiz() {
+            userName = nameInput.value.trim() || "Guest";
+            userNameDisplay.textContent = userName;
+            resultUserNameDisplay.textContent = userName;
+            showPage('quiz-page');
+
+            totalMarksDisplay.textContent = quizData.length;
+            initializeQuestionNav();
+            loadQuestion(currentQuestionIndex);
+            startTotalTimer();
+        }
+
+        function initializeQuestionNav() {
+            questionNavList.innerHTML = '';
+            quizData.forEach((_, index) => {
+                const li = document.createElement('li');
+                li.textContent = index + 1;
+                li.classList.add('question-nav-item', `status-${questionStatus[index]}`);
+                li.dataset.index = index;
+                li.addEventListener('click', () => navigateToQuestion(index));
+                questionNavList.appendChild(li);
+            });
+             updateQuestionNavHighlight();
+        }
+
+        function updateQuestionNavHighlight() {
+             const items = questionNavList.querySelectorAll('.question-nav-item');
+             items.forEach((item, index) => {
+                 item.style.borderColor = '';
+                 item.style.borderWidth = '';
+                 if (index === currentQuestionIndex) {
+                     item.style.borderColor = '#007bff';
+                     item.style.borderWidth = '2px';
+                 }
+             });
+        }
+
+
+        function updateSingleQuestionNavStatus(index) {
+            const item = questionNavList.querySelector(`.question-nav-item[data-index="${index}"]`);
+            if (item) {
+                item.classList.remove('status-default', 'status-answered', 'status-unanswered', 'status-review', 'status-answered-review');
+                item.classList.add(`status-${questionStatus[index]}`);
+            }
+        }
+
+        function recordTimeSpent() {
+            if (questionViewStartTime !== null) {
+                const timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                if (timeElapsedThisVisit > 0) {
+                    timeSpentPerQuestion[currentQuestionIndex] += timeElapsedThisVisit;
+                }
+                questionViewStartTime = null;
+            }
+        }
+
+        function updateStatus(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let currentStatus = questionStatus[index];
+            let newStatus = currentStatus;
+
+            if (answered && reviewed) {
+                newStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                newStatus = 'answered';
+            } else if (!answered && reviewed) {
+                newStatus = 'review';
+            } else if (!answered && !reviewed) {
+                if (currentStatus === 'unanswered') {
+                    newStatus = 'unanswered';
+                } else if (currentStatus === 'default') {
+                     newStatus = 'default';
+                } else {
+                    newStatus = 'unanswered';
+                }
+            }
+
+            if (newStatus !== currentStatus) {
+                questionStatus[index] = newStatus;
+                updateSingleQuestionNavStatus(index);
+            }
+        }
+
+        function finalizeStatusOnLeave(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let finalStatus = questionStatus[index];
+
+            if (!answered && !reviewed) {
+                finalStatus = 'unanswered';
+            } else if (answered && reviewed) {
+                finalStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                finalStatus = 'answered';
+            } else if (!answered && reviewed) {
+                finalStatus = 'review';
+            }
+
+            if (finalStatus !== questionStatus[index]) {
+                questionStatus[index] = finalStatus;
+            }
+            updateSingleQuestionNavStatus(index);
+        }
+
+
+        function loadQuestion(index) {
+            const question = quizData[index];
+            currentQuestionNumberDisplay.textContent = `Question ${index + 1} of ${quizData.length}`;
+            questionText.textContent = question.question;
+
+            // --- NEW: Handle Image Display ---
+            imageContainer.innerHTML = ''; // Clear previous image
+            if (question.image) {
+                const imgElement = document.createElement('img');
+                imgElement.src = question.image;
+                imgElement.alt = `Image for question ${index + 1}`; // Add alt text
+                // Style applied via CSS now
+                imageContainer.appendChild(imgElement);
+            }
+            // --- END NEW ---
+
+            optionsList.innerHTML = '';
+            question.options.forEach((option, i) => {
+                const li = document.createElement('li');
+                const inputId = `q${index}_option${i}`;
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `question${index}`;
+                input.value = option;
+                input.id = inputId;
+                input.checked = userAnswers[index] === option;
+                input.addEventListener('change', () => {
+                    userAnswers[index] = option;
+                    updateStatus(index);
+                });
+
+                const label = document.createElement('label');
+                label.htmlFor = inputId;
+                label.textContent = option;
+
+                li.appendChild(input);
+                li.appendChild(label);
+                optionsList.appendChild(li);
+            });
+
+            prevButton.disabled = index === 0;
+            nextButton.textContent = index === quizData.length - 1 ? 'Submit' : 'Next';
+
+            reviewButton.textContent = markedForReview[index] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[index] ? '#5a32a3' : '#6f42c1';
+
+            questionViewStartTime = Date.now();
+            startQuestionTimer();
+
+            updateQuestionNavHighlight();
+
+            const questionAreaWrapper = document.querySelector('.question-area-wrapper');
+            if (questionAreaWrapper) questionAreaWrapper.scrollTop = 0;
+        }
+
+        function navigateToQuestion(index) {
+            if (index < 0 || index >= quizData.length || index === currentQuestionIndex) return;
+
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            currentQuestionIndex = index;
+            loadQuestion(currentQuestionIndex);
+        }
+
+        function handleNext() {
+             const leavingIndex = currentQuestionIndex;
+             recordTimeSpent();
+             finalizeStatusOnLeave(leavingIndex);
+
+             if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion(currentQuestionIndex);
+            } else {
+                submitQuiz();
+            }
+        }
+
+        function handlePrev() {
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            if (currentQuestionIndex > 0) {
+               currentQuestionIndex--;
+               loadQuestion(currentQuestionIndex);
+            }
+        }
+
+        function toggleReview() {
+            markedForReview[currentQuestionIndex] = !markedForReview[currentQuestionIndex];
+            updateStatus(currentQuestionIndex);
+            reviewButton.textContent = markedForReview[currentQuestionIndex] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[currentQuestionIndex] ? '#5a32a3' : '#6f42c1';
+        }
+
+
+        function startQuestionTimer() {
+            clearInterval(questionTimerInterval);
+
+            function updateTimerDisplay() {
+                let totalTimeSpentSoFar = timeSpentPerQuestion[currentQuestionIndex];
+                let timeElapsedThisVisit = 0;
+
+                if (questionViewStartTime) {
+                    timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                }
+
+                let currentTotalTime = totalTimeSpentSoFar + timeElapsedThisVisit;
+                let displayTime = Math.round(currentTotalTime);
+
+                questionTimerDisplay.classList.remove('red');
+
+                if (currentTotalTime > QUESTION_TIME_LIMIT) {
+                    let exceededTime = Math.round(currentTotalTime - QUESTION_TIME_LIMIT);
+                    questionTimerDisplay.textContent = `Exceeded: ${exceededTime}s`;
+                    questionTimerDisplay.classList.add('red');
+                } else {
+                     questionTimerDisplay.textContent = `Time: ${displayTime}s`;
+                }
+            }
+
+            updateTimerDisplay();
+            questionTimerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function startTotalTimer() {
+            clearInterval(totalTimerInterval);
+            let currentTime = totalTimeSeconds;
+
+            totalTimerInterval = setInterval(() => {
+                currentTime--;
+                if (currentTime <= 0) {
+                    clearInterval(totalTimerInterval);
+                    totalTimerDisplay.textContent = '00:00';
+                    alert("Time's up!");
+                    submitQuiz();
+                } else {
+                    const minutes = Math.floor(currentTime / 60);
+                    const seconds = currentTime % 60;
+                    totalTimerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function submitQuiz() {
+            recordTimeSpent();
+            finalizeStatusOnLeave(currentQuestionIndex);
+            clearInterval(questionTimerInterval);
+            clearInterval(totalTimerInterval);
+
+             questionStatus.forEach((status, index) => {
+                 if (index !== currentQuestionIndex) {
+                     finalizeStatusOnLeave(index);
+                 }
+             });
+
+            calculateResults();
+            showPage('results-page');
+        }
+
+        function calculateResults() {
+            let score = 0;
+            wrongUnansweredList.innerHTML = '';
+
+            quizData.forEach((question, index) => {
+                const isCorrect = userAnswers[index] === question.answer;
+                if (isCorrect) {
+                    score++;
+                }
+
+                if (questionStatus[index] === 'unanswered' || (userAnswers[index] !== null && !isCorrect)) {
+                    const resultItem = document.createElement('div');
+                    resultItem.classList.add('result-item');
+
+                    const qText = document.createElement('p');
+                    qText.classList.add('question');
+                    qText.innerHTML = `<strong>Q${index + 1}:</strong> ${question.question}`;
+                    resultItem.appendChild(qText);
+
+                    const yourAns = document.createElement('p');
+                    yourAns.innerHTML = `<strong>Your Answer:</strong> `;
+                    if (userAnswers[index] !== null) {
+                         yourAns.innerHTML += `<span class="your-answer">${userAnswers[index]}</span>`;
+                    } else {
+                         yourAns.innerHTML += `<span class="your-answer">Not Answered</span>`;
+                    }
+                     resultItem.appendChild(yourAns);
+
+
+                    const correctAns = document.createElement('p');
+                    correctAns.innerHTML = `<strong>Correct Answer:</strong> <span class="correct-answer">${question.answer}</span>`;
+                    resultItem.appendChild(correctAns);
+
+                    const explanation = document.createElement('p');
+                    explanation.classList.add('explanation');
+                    explanation.textContent = question.explanation;
+                    resultItem.appendChild(explanation);
+
+                    wrongUnansweredList.appendChild(resultItem);
+                }
+            });
+
+            scoreDisplay.textContent = score;
+            totalMarksDisplay.textContent = quizData.length;
+
+            setTimeout(generateTimeChart, 100);
+        }
+
+         function generateTimeChart() {
+            const ctx = timeChartCanvas.getContext('2d');
+             if (!ctx) {
+                console.error("Failed to get canvas context for time chart.");
+                return;
+            }
+            const labels = quizData.map((_, index) => `Q${index + 1}`);
+            const data = timeSpentPerQuestion.map(time => Math.round(time));
+
+            const normalColor = 'rgba(0, 123, 255, 0.3)';
+            const exceededColor = 'rgba(220, 53, 69, 0.3)';
+            const normalBorder = 'rgba(0, 123, 255, 1)';
+            const exceededBorder = 'rgba(220, 53, 69, 1)';
+
+            if (timeChart) {
+                timeChart.destroy();
+            }
+
+            try {
+                timeChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Time Spent (seconds)',
+                                data: data,
+                                fill: true,
+                                tension: 0.3,
+                                segment: {
+                                    borderColor: ctx => (ctx.p1.parsed.y > QUESTION_TIME_LIMIT) ? exceededBorder : normalBorder,
+                                    backgroundColor: ctx => {
+                                        const y1 = ctx.p0.parsed.y;
+                                        const y2 = ctx.p1.parsed.y;
+                                        return (y1 > QUESTION_TIME_LIMIT || y2 > QUESTION_TIME_LIMIT) ? exceededColor : normalColor;
+                                    }
+                                },
+                                 pointBackgroundColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+                                 pointBorderColor: '#fff',
+                                 pointHoverBackgroundColor: '#fff',
+                                 pointHoverBorderColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+
+                            },
+                            {
+                                type: 'line',
+                                label: `${QUESTION_TIME_LIMIT}s Threshold`,
+                                data: Array(quizData.length).fill(QUESTION_TIME_LIMIT),
+                                borderColor: 'rgba(220, 53, 69, 0.8)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Time (seconds)'
+                                }
+                            },
+                            x: {
+                                 title: {
+                                    display: true,
+                                    text: 'Question Number'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.datasetIndex === 1) return null;
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) label += context.parsed.y + 's';
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                         interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                    }
+                });
+            } catch (error) {
+                console.error("Chart.js error:", error);
+            }
+        }
+
+        // --- Event Listeners ---
+        startQuizButton.addEventListener('click', startQuiz);
+        prevButton.addEventListener('click', handlePrev);
+        nextButton.addEventListener('click', handleNext);
+        reviewButton.addEventListener('click', toggleReview);
+
+         nameInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                startQuizButton.click();
+            }
+        });
+
+        // --- Initial Setup ---
+        showPage('landing-page');
+
+    </script>
+
+</body>
+</html>

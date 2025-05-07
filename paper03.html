@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supreme HTML Quiz</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        /* ... (your existing CSS rules) ... */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars on body */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: #f0f2f5;
+            color: #333;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quiz-container, .landing-container, .results-container {
+            background-color: #ffffff;
+            overflow: hidden;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .landing-container, .results-container {
+            padding: 30px;
+            text-align: center;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        .results-container {
+            justify-content: flex-start; /* Align results content to top */
+        }
+
+
+        .landing-container h1, .results-container h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2em;
+            font-weight: 600;
+            margin-top: 0;
+        }
+
+        .landing-container input[type="text"] {
+            padding: 10px 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80%;
+            max-width: 300px;
+            font-size: 1em;
+        }
+
+        .start-button, .nav-button, .review-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s ease;
+            margin: 5px;
+            font-weight: 500;
+        }
+
+        .start-button:hover, .nav-button:hover, .review-button:hover {
+            background-color: #0056b3;
+        }
+
+        .quiz-header {
+            background-color: #343a40;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            height: 48px; /* Fixed height */
+            box-sizing: border-box;
+        }
+
+        .quiz-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .user-info {
+            font-size: 0.95em;
+        }
+
+        .quiz-body {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            height: calc(100vh - 48px); /* Full height minus header */
+        }
+
+        .question-nav {
+            width: 200px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            flex-shrink: 0;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .question-nav h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .question-nav-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(35px, 1fr));
+            gap: 8px;
+        }
+
+        .question-nav-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 35px;
+            height: 35px;
+            border: 1px solid #adb5bd;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: normal;
+            background-color: #ffffff;
+            color: #495057;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            position: relative;
+            font-size: 0.9em;
+        }
+
+        .question-nav-item:hover {
+            background-color: #e9ecef;
+        }
+
+        /* Status Colors */
+        .question-nav-item.status-default { background-color: #ffffff; color: #495057; border-color: #adb5bd;} /* White */
+        .question-nav-item.status-answered { background-color: #28a745; color: white; border-color: #218838; } /* Green */
+        .question-nav-item.status-unanswered { background-color: #dc3545; color: white; border-color: #c82333; } /* Red */
+        .question-nav-item.status-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple */
+        .question-nav-item.status-answered-review { background-color: #6f42c1; color: white; border-color: #5a32a3; } /* Purple + Green Dot */
+
+        /* Green dot for answered and reviewed */
+        .question-nav-item.status-answered-review::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 7px;
+            height: 7px;
+            background-color: #28a745; /* Green dot */
+            border-radius: 50%;
+            border: 1px solid white;
+        }
+
+
+        .main-content {
+            flex-grow: 1;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            /* justify-content: space-between; REMOVED - Let content flow naturally */
+            overflow-y: auto; /* Allow scrolling for the whole main area */
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .timers {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1em;
+            font-weight: 500;
+            color: #495057;
+            flex-shrink: 0;
+        }
+
+        .timer {
+            background-color: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+        }
+        .timer.red {
+            color: #dc3545;
+            border-color: #dc3545;
+            font-weight: 600;
+        }
+
+        .question-area-wrapper { /* Wrapper for question and options */
+             /* Allow this area to take up available space before buttons */
+             flex-grow: 1;
+             margin-bottom: 20px; /* Space before buttons */
+             /* Removed overflow-y: auto; let main-content handle scrolling */
+        }
+
+        .question-text {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            color: #212529;
+            font-weight: 500;
+        }
+
+        /* --- NEW: Image Container Styling --- */
+        #question-image-container {
+             margin-bottom: 20px; /* Space between image and options */
+             text-align: center; /* Center the image */
+        }
+        #question-image-container img {
+             max-width: 100%; /* Make image responsive */
+             height: auto;    /* Maintain aspect ratio */
+             max-height: 300px; /* Optional: Limit max height */
+             border-radius: 4px; /* Optional: Rounded corners */
+             box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: Slight shadow */
+        }
+         /* --- END NEW --- */
+
+        .options {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .options li {
+            margin-bottom: 10px;
+        }
+
+        .options label {
+            display: block;
+            background-color: #f8f9fa;
+            border: 1px solid #ced4da;
+            padding: 12px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            font-size: 1em;
+            font-weight: normal;
+        }
+
+        .options input[type="radio"] {
+            margin-right: 10px;
+            display: none;
+        }
+
+         .options label:hover {
+             background-color: #e2e6ea;
+             border-color: #adb5bd;
+         }
+
+        .options input[type="radio"]:checked + label {
+            background-color: #cfe2ff;
+            border-color: #007bff;
+            font-weight: 500;
+            color: #0056b3;
+        }
+
+
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            /* margin-top: auto; REMOVED - Let it sit naturally at the bottom */
+            flex-shrink: 0; /* Prevent buttons area from shrinking */
+        }
+
+        .nav-button.prev { background-color: #ffc107; color: #212529;}
+        .nav-button.prev:hover { background-color: #e0a800; }
+        .review-button { background-color: #6f42c1; }
+        .review-button:hover { background-color: #5a32a3; }
+        .nav-button.next { background-color: #28a745; }
+        .nav-button.next:hover { background-color: #218838; }
+        .nav-button:disabled {
+            background-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .nav-button.submit { background-color: #dc3545; }
+        .nav-button.submit:hover { background-color: #c82333; }
+
+
+        /* Results Page Specifics */
+        .results-content {
+             width: 100%;
+             max-width: 900px;
+             margin: 0 auto;
+             padding: 20px 0;
+        }
+
+        .score-card {
+            background-color: #e6f7ff;
+            border: 1px solid #007bff;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+        }
+        .score-card h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #0056b3;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        .score-card p {
+            font-size: 1.2em;
+            font-weight: 500;
+            color: #343a40;
+            margin: 5px 0;
+        }
+
+        .results-section {
+            margin-bottom: 25px;
+            text-align: left;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        .results-section h3 {
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .result-item {
+            border-bottom: 1px dashed #ced4da;
+            padding: 12px 0;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-item p {
+            margin: 4px 0;
+            font-size: 1em;
+            line-height: 1.4;
+        }
+        .result-item .question { font-weight: 600; color: #343a40; }
+        .result-item .your-answer { color: #dc3545; font-weight: 500;}
+        .result-item .correct-answer { color: #28a745; font-weight: 500;}
+        .result-item .explanation { font-style: normal; color: #6c757d; margin-top: 8px; font-size: 0.95em;}
+
+        .time-analysis {
+             padding: 15px;
+             background-color: #f8f9fa;
+             border: 1px solid #dee2e6;
+             border-radius: 5px;
+             margin-bottom: 20px;
+        }
+        .time-analysis h3 {
+             color: #495057;
+             border-bottom: 1px solid #dee2e6;
+             padding-bottom: 8px;
+             margin-bottom: 15px;
+             text-align: left;
+             font-size: 1.2em;
+             font-weight: 600;
+        }
+        #timeChart {
+            max-height: 350px;
+            width: 100% !important;
+        }
+
+        /* Hide elements */
+        .hidden {
+            display: none !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Landing Page -->
+    <div id="landing-page" class="landing-container">
+        <h1>Welcome Rika!</h1>
+        <input type="text" id="name-input" placeholder="Want to Change your Name?">
+        <br>
+        <button id="start-quiz-button" class="start-button">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Page -->
+    <div id="quiz-page" class="quiz-container hidden">
+        <div class="quiz-header">
+            <h1>Oswal 360 Physics 1</h1>
+            <div class="user-info">
+                <span>Name: <span id="user-name"></span></span> |
+                <span>Total Time Left: <span id="total-timer">50:00</span></span>
+            </div>
+        </div>
+        <div class="quiz-body">
+            <div class="question-nav">
+                <h3>Question Palette</h3>
+                <ul id="question-nav-list" class="question-nav-list">
+                    <!-- Question numbers will be dynamically added here -->
+                </ul>
+            </div>
+            <div class="main-content">
+                <!-- Top content wrapper -->
+                <div class="timers">
+                    <span id="current-question-number">Question X of Y</span>
+                    <span class="timer" id="question-timer">Time: 1s</span>
+                </div>
+                <!-- Scrollable question area -->
+                <div class="question-area-wrapper">
+                    <p id="question-text" class="question-text">Question text goes here...</p>
+                    <!-- === NEW: Image container === -->
+                    <div id="question-image-container"></div>
+                    <!-- === END NEW === -->
+                    <ul id="options-list" class="options">
+                        <!-- Options will be dynamically added here -->
+                    </ul>
+                </div>
+                 <!-- Navigation buttons at the bottom -->
+                <div class="navigation-buttons">
+                    <button id="prev-button" class="nav-button prev">Previous</button>
+                    <button id="review-button" class="review-button">Mark for Review</button>
+                    <button id="next-button" class="nav-button next">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Page -->
+    <div id="results-page" class="results-container hidden">
+       <div class="results-content">
+            <h1>Quiz Results</h1>
+            <div id="score-card" class="score-card">
+                <h2>Score</h2>
+                <p><span id="score">0</span> / <span id="total-marks">0</span></p>
+                 <p>Well done, <span id="result-user-name">User</span>!</p>
+            </div>
+
+            <div id="wrong-unanswered-list" class="results-section">
+                <h3>Review Incorrect & Unanswered Questions</h3>
+                <!-- Incorrect/Unanswered questions will be added here -->
+            </div>
+
+            <div class="time-analysis">
+                 <h3>Time Analysis Per Question</h3>
+                <canvas id="timeChart"></canvas>
+            </div>
+             <button onclick="window.location.reload();" class="start-button">Restart Quiz</button>
+        </div>
+    </div>
+
+<script>
+    const quizData = [
+        {
+            question: "In which of the following crystals alternate tetrahedral voids are occupied?",
+            options: ["Na2O", "ZnS", "NaCl", "CaF2"],
+            answer: "ZnS",
+            explanation: "Explanation for Question 1: ZnS (Zincblende structure) features a cubic close-packed (FCC) arrangement of S²⁻ ions with Zn²⁺ ions occupying half of the tetrahedral holes. Specifically, they occupy alternate tetrahedral voids."
+        },
+        {
+            question: "Dislocation defect is also known as",
+            options: ["frenkel defect", "interstitial defect", "metal excess defect", "schottky defect"],
+            answer: "frenkel defect",
+            explanation: "Explanation for Question 2: A Frenkel defect is a type of point defect in crystalline solids where an atom or ion is displaced from its own lattice site to an interstitial site, creating a vacancy at the original site and an interstitial defect at the new site. This displacement is also referred to as a dislocation of the ion."
+        },
+        {
+            question: "How many tetrahedral holes are occupied in diamond?",
+            options: ["100%", "25%", "75%", "50%"],
+            answer: "50%",
+            explanation: "Explanation for Question 3: The diamond structure is based on a face-centered cubic (FCC) lattice. Carbon atoms occupy all FCC lattice points and also half of the tetrahedral voids (specifically, alternate tetrahedral voids). There are 8 tetrahedral voids per FCC unit cell, so carbon occupies 4 of them. Therefore, 4 out of 8 (50%) tetrahedral voids are occupied."
+        },
+        {
+            question: "Nature of binding forces present in carbon dioxide molecules in solid-state are",
+            options: ["Metallic forces", "Electrostatic forces", "Hydrogen bonding", "London forces"],
+            answer: "London forces",
+            explanation: "Explanation for Question 4: Solid carbon dioxide (dry ice) is a molecular solid. The CO₂ molecules are nonpolar. The intermolecular forces between nonpolar molecules are weak instantaneous dipole-induced dipole forces, also known as London dispersion forces (a type of Van der Waals force)."
+        },
+        {
+            question: "An aqueous solution of methanol and water has vapour pressure",
+            options: ["Equal to that of water", "More than that of water", "Equal to that of methanol", "Less than that of water"],
+            answer: "More than that of water",
+            explanation: "Explanation for Question 5: A solution of methanol and water shows positive deviation from Raoult's Law. This means the vapor pressure of the solution is higher than predicted by Raoult's law, and specifically higher than the vapor pressure of either component individually (assuming non-ideal mixing)."
+        },
+        {
+            question: "The plant cell will shrink when placed in:",
+            options: ["water", "hypotonic solution", "hypertonic solution", "isotonic solution"],
+            answer: "hypertonic solution",
+            explanation: "Explanation for Question 6: When a plant cell is placed in a hypertonic solution (higher solute concentration outside the cell), water moves out of the cell by osmosis into the surrounding solution. This causes the cell to lose turgor pressure, and the cytoplasm and plasma membrane shrink away from the cell wall, a process called plasmolysis, leading to shrinking."
+        },
+        {
+            question: "Which among the following show positive deviation?",
+            options: ["Chloroform and benzene", "Acetone and aniline", "Hydrochloric acid and water", "Acetone and ethanol"],
+            answer: "Acetone and ethanol",
+            explanation: "Explanation for Question 7: Solutions showing positive deviation from Raoult's law have weaker attractive forces between solute-solvent molecules than between solute-solute and solvent-solvent molecules (A-B < A-A or B-B). In acetone and ethanol, hydrogen bonds in ethanol are broken upon mixing with acetone, leading to weaker intermolecular forces and higher vapor pressure (positive deviation)."
+        },
+        {
+            question: "The factor (delta)Tf / molality represents",
+            options: ["formality", "molarity", "normality", "molality"],
+            answer: "molality",
+            explanation: "Explanation for Question 8: This phrasing is unusual. ΔTf (depression in freezing point) is proportional to molality: ΔTf = Kf * molality, where Kf is the cryoscopic constant (or freezing point depression constant). Thus, ΔTf / molality = Kf. The constant Kf is a property of the solvent and relates freezing point depression to molality, it is not a concentration unit itself. However, given the options, and the context often being about how concepts are related, the question or options may be flawed. The unit of Kf is °C·kg/mol or °C/m (where m is molality). The expression ΔTf/molality directly yields this constant. The option 'molality' itself doesn't fit the ratio's units or meaning. Re-evaluating the key's choice 'd' for molality suggests a severe misinterpretation in the source text or options. The ratio represents the **cryoscopic constant (Kf)**. Since Kf is *used* with molality, and 'molality' is the given answer, this is likely an error in the source material."
+        },
+        {
+            question: "The correct cell to represent the following reaction is:\nZn +2Ag⁺ → Zn²⁺+ 2Ag",
+            options: ["2Ag|Ag⁺ || Zn| Zn²⁺", "Zn | Zn²⁺ || Ag⁺|Ag", "Ag| Ag⁺ I| Zn| Zn²⁺", "Ag⁺ | Ag || Zn²⁺ | Zn"],
+            answer: "Zn | Zn²⁺ || Ag⁺|Ag",
+            explanation: "Explanation for Question 9: A galvanic cell is represented with the anode (oxidation) on the left and the cathode (reduction) on the right. Oxidation occurs at the zinc electrode (Zn → Zn²⁺ + 2e⁻), and reduction occurs at the silver electrode (Ag⁺ + e⁻ → Ag). The standard cell notation is Anode | Anode ion || Cathode ion | Cathode. Thus, Zn | Zn²⁺ || Ag⁺|Ag is the correct representation.",
+            
+        },
+        {
+            question: "Which of the following is a redox reaction?",
+            options: ["Mg(OH)2 + 2NH4CL → MgC12 + 2NH4OH", "Ca(OH)2 + 2HCl → CaCl2 + 2H2O", "NaCl + KNO3 → NaNO3 + KCl", "Zn + 2AgCN → 2Ag + Zn (CN)2"],
+            answer: "Zn + 2AgCN → 2Ag + Zn (CN)2",
+            explanation: "Explanation for Question 10: A redox reaction involves changes in oxidation states. In the reaction Zn + 2AgCN → 2Ag + Zn(CN)₂, Zinc is oxidized from an oxidation state of 0 in Zn to +2 in Zn(CN)₂, and Silver is reduced from an oxidation state of +1 in AgCN to 0 in Ag."
+        },
+        {
+            question: "The SI units of molar conductance are:",
+            options: ["Sm³mol⁻¹", "Sm⁻¹mol⁻¹", "Sm²mol⁻¹", "Sm-²mol"],
+            answer: "Sm²mol⁻¹",
+            explanation: "Explanation for Question 11: Molar conductivity (Λm) is given by Λm = κ/C, where κ is conductivity (units Sm⁻¹ or Ω⁻¹m⁻¹) and C is molar concentration (units mol/m³). So, units of Λm = (Sm⁻¹) / (mol/m³) = Sm⁻¹m³/mol = Sm²mol⁻¹."
+        },
+        {
+            question: "Reaction which takes place in one step is known as",
+            options: ["Elementary reaction", "Unimolecular reaction", "Reaction rate", "Bimolecular reaction"],
+            answer: "Elementary reaction",
+            explanation: "Explanation for Question 12: An elementary reaction (or elementary step) is a reaction that occurs in a single step without any intermediate reaction species. Its molecularity is defined by the number of reactant molecules involved in that single step."
+        },
+        {
+            question: "The slope in the plot of log [R]₀ / [R] vs. time for a first order reaction is",
+            options: ["-k", "-k / 2.303", "+k / 2.303", "+k"],
+            answer: "+k / 2.303",
+            explanation: "Explanation for Question 13: For a first-order reaction, the integrated rate law can be written as ln([R]₀/[R]) = kt. Converting to log₁₀, 2.303 log₁₀([R]₀/[R]) = kt, so log₁₀([R]₀/[R]) = (k/2.303)t. Plotting log₁₀([R]₀/[R]) vs. time (t) yields a straight line with a slope of +k/2.303."
+        },
+        {
+            question: "For the reaction A → products, at [A] = 0.4 M, t₁/₂ = 24 s and at [A] = 0.2 M, t₁/₂ = 12 s. The unit for the rate constant is",
+            options: ["s⁻²", "mol L⁻¹s⁻¹", "L²/mol²/s", "s⁻¹"],
+            answer: "mol L⁻¹s⁻¹",
+            explanation: "Explanation for Question 14: For a zero-order reaction, the half-life (t₁/₂) is directly proportional to the initial concentration ([A]₀). Here, when [A]₀ is halved (0.4 M to 0.2 M), the half-life is also halved (24 s to 12 s). This indicates a zero-order reaction. The units of the rate constant (k) for a zero-order reaction are mol L⁻¹s⁻¹."
+        },
+        {
+            question: "Adsorption is accompanied with:",
+            options: ["all of these", "decrease in enthalpy", "the value of (delta)S * T is negative", "decrease in entropy of system"],
+            answer: "all of these",
+            explanation: "Explanation for Question 15: Adsorption is generally an exothermic process, meaning enthalpy decreases (ΔH is negative). When particles are adsorbed onto a surface, their freedom of movement is restricted, leading to a decrease in randomness, so entropy decreases (ΔS is negative). Since adsorption is spontaneous at ordinary temperatures (ΔG = ΔH - TΔS < 0), and ΔH is negative and ΔS is negative, the term TΔS must be less negative than ΔH for ΔG to be negative. A negative ΔS means TΔS is negative. Thus, adsorption is accompanied by a decrease in enthalpy, a decrease in entropy, and a negative TΔS value. 'All of these' is the correct answer."
+        },
+        {
+            question: "Bredig's arc method is used to prepare colloidal solutions of",
+            options: ["Au, Pt, S", "S, Au, Fe(OH)3", "Pt, Ag, As2S3", "Au, Pt, Ag"],
+            answer: "Au, Pt, Ag",
+            explanation: "Explanation for Question 16: Bredig's arc method is an electrical disintegration method used to prepare stable colloidal solutions (sols) of metals like gold (Au), silver (Ag), and platinum (Pt)."
+        },
+        {
+            question: "A catalyst:",
+            options: ["increases the average kinetic energy of reacting species", "alter the state of equilibrium", "increases collision frequency", "decreases the activation energy"],
+            answer: "decreases the activation energy",
+            explanation: "Explanation for Question 17: A catalyst increases the rate of a reaction by providing an alternative reaction pathway with a lower activation energy. It does not affect the average kinetic energy, collision frequency significantly in a way that changes the rate mechanism, nor does it change the equilibrium position (though it helps reach equilibrium faster)."
+        },
+        {
+            question: "Which of the following will show Tyndall effect?",
+            options: ["Aqueous solution of soap above critical micelle concentration", "Aqueous solution of sugar", "Aqueous solution of soap below critical micelle concentration", "Aqueous solution of sodium chloride"],
+            answer: "Aqueous solution of soap above critical micelle concentration",
+            explanation: "Explanation for Question 18: The Tyndall effect, the scattering of light by colloidal particles, is shown by colloidal solutions. Aqueous solutions of sugar and sodium chloride are true solutions (particle size is too small to scatter light). A soap solution behaves as a true solution below the Critical Micelle Concentration (CMC). Above the CMC and above the Kraft temperature (Tk), soap molecules aggregate to form micelles, which are colloidal-sized particles capable of scattering light and showing the Tyndall effect.",
+            
+        },
+        {
+            question: "Which among the following reaction takes place in zone of heat absorption?",
+            options: ["All of these", "CaCO3 heat → CaO + CO2", "CO2 + C → 2CO", "C + O2 → CO2"],
+            answer: "CO2 + C → 2CO",
+            explanation: "Explanation for Question 19: This question refers to reactions occurring in a blast furnace during iron extraction. The reaction CO₂ + C → 2CO is an endothermic reaction (absorbs heat) and takes place in the upper part of the furnace (zone of heat absorption) where CO₂ reacts with hot coke."
+        },
+        {
+            question: "Metal halides are found in lakes and seas because",
+            options: ["They are lighter than water", "They are insoluble in water", "They are soluble in water", "They are heavier than water"],
+            answer: "They are soluble in water",
+            explanation: "Explanation for Question 20: Many metal halides, particularly alkali and alkaline earth metal halides (like NaCl, KCl, MgCl₂), are highly soluble in water. These dissolve from rocks and soil into rainwater and rivers, eventually accumulating in lakes and seas."
+        },
+        {
+            question: "In the extraction of copper from its sulphide ore, the metal is formed by the reduction of Cu2O with",
+            options: ["FeS", "Cu₂S", "SO₂", "CO"],
+            answer: "Cu₂S",
+            explanation: "Explanation for Question 21: In the smelting process of copper sulphide ores, after roasting, some Cu₂S is converted to Cu₂O. In the reverberatory furnace, the remaining Cu₂S reacts with Cu₂O in a process called auto-reduction or self-reduction: 2Cu₂O + Cu₂S → 6Cu + SO₂."
+        },
+        {
+            question: "An ore has impurities which are lighter than the ore. The process used for the concentration of ore is",
+            options: ["Froth floatation", "Hydraulic washing", "Magnetic separation", "Leaching"],
+            answer: "Hydraulic washing",
+            explanation: "Explanation for Question 22: Hydraulic washing (or gravity separation) is a method of ore concentration used when the ore particles are heavier than the gangue (impurities). The crushed ore is washed with a stream of water, which carries away the lighter impurities while the heavier ore settles down."
+        },
+        {
+            question: "Which of the following is an amphoteric oxide?",
+            options: ["SnO₂", "V₂O₅", "Cl₂O₇", "Cr₂O₃"],
+            answer: "Cr₂O₃",
+            explanation: "Explanation for Question 23: Amphoteric oxides react with both acids and bases. Among the options, Cr₂O₃ (Chromium(III) oxide) is amphoteric. SnO₂ (Tin(IV) oxide) and V₂O₅ (Vanadium(V) oxide) are also amphoteric, while Cl₂O₇ (Chlorine(VII) oxide) is acidic. However, based on common examples taught, Cr₂O₃ is a classic example of an amphoteric oxide. The explanation mentions oxidation states, suggesting that as oxidation state increases, acidity increases. Cr(+3) is intermediate, V(+5) is high (more acidic), Cl(+7) is highest (most acidic), Sn(+4) is intermediate (amphoteric like Cr). Multiple amphoteric oxides are listed in options, which is potentially flawed. Following the key, Cr₂O₃ is chosen."
+        },
+        {
+            question: "The structure of CIF3 is",
+            options: ["Octahedral", "T-shaped", "Pyramidal", "Tetrahedral"],
+            answer: "T-shaped",
+            explanation: "Explanation for Question 24: Using VSEPR theory, ClF₃ has a central Cl atom. Cl has 7 valence electrons, plus 3 from F atoms, totaling 10 electrons or 5 electron pairs. Three pairs are bonding (Cl-F bonds), and two are lone pairs. These 5 pairs arrange in a trigonal bipyramidal electron geometry. The most stable arrangement places the lone pairs in the equatorial positions. This results in the three F atoms and the Cl atom forming a T-shaped molecular geometry with the two lone pairs occupying the equatorial plane.",
+            
+        },
+        {
+            question: "Fluorine reacts with conc. NaOH to produce",
+            options: ["NaF and O₂F", "NaF and O₃", "NaF and OF₂", "NaF and O₂"],
+            answer: "NaF and O₂",
+            explanation: "Explanation for Question 25: Fluorine reacts with hot concentrated NaOH solution to produce sodium fluoride, water, and oxygen gas: 2F₂ + 4NaOH(conc.) → 4NaF + 2H₂O + O₂. With cold dilute NaOH, it forms OF₂: 2F₂ + 2NaOH(dilute) → 2NaF + H₂O + OF₂."
+        },
+        {
+            question: "In a neutral solution, how many moles of KMnO4 is required for the oxidation of 10 moles of ferric oxalate?",
+            options: ["6", "5", "2", "4.5"],
+            answer: "6",
+            explanation: "Explanation for Question 26: This calculation appears to be for an acidic medium, not neutral. In acidic medium, KMnO₄ (n-factor 5) oxidizes ferrous oxalate (FeC₂O₄) which has iron(+2) and oxalate(C₂O₄²⁻). Fe²⁺ → Fe³⁺ (change of 1), C₂O₄²⁻ → 2CO₂ (change of 2 per oxalate ion, total change 2). The total change for FeC₂O₄ is 1+2=3, so n-factor is 3. Using N₁V₁ = N₂V₂ or M₁n₁V₁ = M₂n₂V₂, or moles × n-factor are equal at equivalence: moles(KMnO₄) × 5 = moles(FeC₂O₄) × 3. If moles(FeC₂O₄) = 10, then moles(KMnO₄) × 5 = 10 × 3 = 30. Moles(KMnO₄) = 30/5 = 6. This matches option A but is valid for *acidic* medium, not neutral. The question states neutral. In neutral/weakly alkaline medium, KMnO₄ reduces to MnO₂ (n-factor 3). The oxidation of ferric oxalate in neutral medium by MnO₂ is complex and not standard. The question is likely flawed, assuming acidic conditions while stating neutral, or 'ferric oxalate' is a typo and it should be 'ferrous oxalate'. Assuming the calculation based on acidic conditions is what was intended by the provided answer."
+        },
+        {
+            question: "Which is least soluble in water?",
+            options: ["AgBr", "AgI", "Ag2S", "AgCl"],
+            answer: "Ag2S",
+            explanation: "Explanation for Question 27: Solubility products (Ksp) indicate the solubility of sparingly soluble ionic compounds. Lower Ksp values correspond to lower solubility. Ksp values for silver halides are generally low (AgCl ≈ 1.8e⁻¹⁰, AgBr ≈ 5.4e⁻¹³, AgI ≈ 8.3e⁻¹⁷), but Ag₂S has a significantly lower Ksp value (≈ 6e⁻⁵¹), making it much less soluble than the silver halides."
+        },
+        {
+            question: "Haemoglobin and chlorophyll contain:",
+            options: ["Fe and Mg", "Fe and Mn", "Fe and Co", "Mg and Fe"],
+            answer: "Fe and Mg",
+            explanation: "Explanation for Question 28: Haemoglobin, the oxygen-carrying protein in blood, contains iron (Fe) in its heme group. Chlorophyll, the primary pigment in plants for photosynthesis, contains magnesium (Mg) at the center of its porphyrin ring structure."
+        },
+        {
+            question: "The coordination number of Cr in [CrCl₂(ox)₂]³⁻ is:",
+            options: ["6", "4", "3", "5"],
+            answer: "6",
+            explanation: "Explanation for Question 29: Coordination number is the number of atoms or ligands directly bonded to the central metal ion. In [CrCl₂(ox)₂]³⁻, there are two chloride ligands (Cl⁻), which are monodentate (each forms one bond). There are two oxalate ligands (ox²⁻ or C₂O₄²⁻), which are bidentate (each forms two bonds). Total coordination bonds = (2 × 1) + (2 × 2) = 2 + 4 = 6. Thus, the coordination number of Cr is 6."
+        },
+        {
+            question: "According to Werner's theory, the primary valences of the central atom",
+            options: ["Are equal to its coordination number", "Are satisfied by negative ions", "Decide the geometry of the complex", "Are satisfied by negative ions or neutral molecules"],
+            answer: "Are satisfied by negative ions",
+            explanation: "Explanation for Question 30: According to Werner's theory, primary valence corresponds to the oxidation state of the central metal ion and is satisfied by ionizable counterions, which are typically negative ions. Secondary valence corresponds to the coordination number and is satisfied by ligands (negative ions or neutral molecules) that are directly bonded to the metal, determining the geometry."
+        },
+        {
+            question: "Which complex gives three chloride ions per formula unit?",
+            options: ["CrCl₃ . 5H₂O", "CrCl₃ . 6H₂O", "All of these", "CrCl₃ . 4H₂O"],
+            answer: "CrCl₃ . 6H₂O",
+            explanation: "Explanation for Question 31: The number of ionizable chloride ions in a coordination complex is determined by the chloride ions outside the coordination sphere (square brackets). Let's consider the possibilities for CrCl₃·6H₂O (with Cr having oxidation state +3 and coordination number typically 6):\n- [Cr(H₂O)₆]Cl₃: 3 ionizable Cl⁻ ions.\n- [Cr(H₂O)₅Cl]Cl₂·H₂O: 2 ionizable Cl⁻ ions.\n- [Cr(H₂O)₄Cl₂]Cl·2H₂O: 1 ionizable Cl⁻ ion.\nTo give three chloride ions per formula unit, the complex must be [Cr(H₂O)₆]Cl₃. Similarly, for CrCl₃·5H₂O, possibilities include [Cr(H₂O)₅Cl]Cl₂·H₂O (2 Cl⁻) or [Cr(H₂O)₄Cl₂]Cl·H₂O (1 Cl⁻), neither gives 3. For CrCl₃·4H₂O, possibilities include [Cr(H₂O)₄Cl₂]Cl·2H₂O (1 Cl⁻) or [Cr(H₂O)₃Cl₃]·3H₂O (0 Cl⁻). Only [Cr(H₂O)₆]Cl₃ from CrCl₃·6H₂O yields 3 ionizable chloride ions."
+        },
+        {
+            question: "The reaction given below:\n[Structure representing Benzene Ring] + 2Na + CH3Cl → [Structure representing Toluene] + 2NaCl\nis called:",
+            options: ["Gattermann reaction", "Wurtz - Fittig reaction", "Wurtz reaction", "Fittig reaction"],
+            answer: "Wurtz - Fittig reaction",
+            explanation: "Explanation for Question 32: The Wurtz-Fittig reaction is a coupling reaction that involves an alkyl halide, an aryl halide, and sodium metal to form an alkylarene. The given reaction shows an aryl halide (implied, reacting benzene + alkyl halide + Na) forming toluene (methylbenzene). The general form is Ar-X + R-X + 2Na → Ar-R + 2NaX. The representation shows benzene plus reactants, which is a simplification, but the product toluene from what appears to be chlorobenzene (Ar-X) and chloromethane (R-X) using sodium is characteristic of the Wurtz-Fittig reaction."
+        },
+        {
+            question: "Which of the following is halogen exchange reaction?",
+            options: ["R X + Nal → RI + NaX", "R-OH+HX → R-X+ H2O", ">c=c< + H X → [>c=c<↓↓HX]", "CH3 -CH3 + X₂ heat or light → CH3 -CH₂X + HX"],
+            answer: "R X + Nal → RI + NaX",
+            explanation: "Explanation for Question 33: A halogen exchange reaction is one where a halogen atom in an organic molecule is replaced by another halogen atom. Option A, RX + NaI → RI + NaX, is the Finkelstein reaction, a classic example of a halogen exchange reaction (Iodine replaces X, where X is typically Cl or Br). Option B is conversion of alcohol to alkyl halide. Option C is halogenation of an alkene (addition or substitution depending on conditions). Option D is free radical halogenation of an alkane (substitution)."
+        },
+        {
+            question: "When a haloalkane with ß - hydrogen atom is heated with alcoholic solution of potassium hydroxide then:",
+            options: ["All of these", "elimination of halogen atom from a - carbon", "elimination of hydrogen atom from ß- carbon", "alkene is formed as a product"],
+            answer: "All of these",
+            explanation: "Explanation for Question 34: Heating a haloalkane with a beta-hydrogen atom with alcoholic KOH results in dehydrohalogenation (β-elimination). A hydrogen atom is removed from the carbon adjacent to the carbon bearing the halogen (β-carbon), and the halogen atom is removed from the carbon bearing the halogen (α-carbon). This results in the formation of an alkene as the product. Options B, C, and D all describe aspects of this process, so 'All of these' is the correct answer."
+        },
+        {
+            question: "An organic compound X is oxidized by using acidified K2Cr2O7. The product obtained reacts with Phenyl hydrazine but does not answer the silver mirror test. The possible structure of X is:",
+            options: ["(CH3)2CHOH", "None of these", "CH3CHO", "CH3CH2OH"],
+            answer: "(CH3)2CHOH",
+            explanation: "Explanation for Question 35: Acidified K₂Cr₂O₇ is a strong oxidizing agent. X is oxidized to a product that reacts with phenylhydrazine (characteristic reaction of aldehydes and ketones) but does not give the silver mirror test (Tollens' test, specific for aldehydes). This means the product is a ketone. Secondary alcohols are oxidized to ketones by strong oxidizing agents. (CH₃)₂CHOH (propan-2-ol, a secondary alcohol) oxidizes to (CH₃)₂CO (acetone, a ketone). CH₃CHO (acetaldehyde, an aldehyde) and CH₃CH₂OH (ethanol, a primary alcohol, which oxidizes to acetaldehyde) would give a positive silver mirror test. Therefore, X is a secondary alcohol."
+        },
+        {
+            question: "The correct IUPAC name of CH3 - C(CH3)(OH) - CH2CH3 is",
+            options: ["2-Methylbutan-2-ol", "3-Methylbutan-3-ol", "2,2-Dimethylpropanol", "tert-butyl alcohol"],
+            answer: "2-Methylbutan-2-ol",
+            explanation: "Explanation for Question 36: Longest carbon chain containing the -OH group has 4 carbons (butane). The -OH group is on the second carbon. A methyl group is also on the second carbon. So, the name is 2-methylbutan-2-ol. Numbering starts from the end closer to the -OH group."
+        },
+        {
+            question: "The compound formed as a result of oxidation of ethyl benzene by KMnO4 is",
+            options: ["Benzophenone", "Acetophenone", "Benzoic acid", "Benzyl alcohol"],
+            answer: "Benzoic acid",
+            explanation: "Explanation for Question 37: Strong oxidizing agents like KMnO₄ oxidize alkyl side chains on a benzene ring to a carboxylic acid group, provided there is at least one benzylic hydrogen (a hydrogen atom attached to the carbon directly bonded to the benzene ring). Ethylbenzene has a CH₂ group attached to the ring, which has benzylic hydrogens. Oxidation cleaves the side chain, converting the carbon attached to the ring into a -COOH group. Thus, ethylbenzene is oxidized to benzoic acid."
+        },
+        {
+            question: "The compound which forms acetaldehyde when heated with dilute NaOH is:",
+            options: ["1, 2 dichloroethane", "1, 1, 1 trichloroethane", "1 chloroethane", "1, 1 dichloroethane"],
+            answer: "1, 1 dichloroethane",
+            explanation: "Explanation for Question 38: Heating vicinal dihalides (halogens on adjacent carbons) or geminal dihalides (halogens on the same carbon) with aqueous KOH or NaOH leads to hydrolysis. 1,1-dichloroethane (CH₃CHCl₂) is a geminal dihalide. Hydrolysis replaces the two chlorine atoms on the same carbon with two -OH groups, forming a geminal diol (CH₃CH(OH)₂). Geminal diols are usually unstable and readily lose a molecule of water to form a carbonyl compound. CH₃CH(OH)₂ loses water to form CH₃CHO (acetaldehyde)."
+        },
+        {
+            question: "Hoffmann Bromamide Degradation reaction is given by:",
+            options: ["[Structure representing Benzamide]", "[Structure representing Nitrobenzene]", "CH3 - C ≡ N", "CH3 - CH2 - CO - NH2"],
+            answer: "CH3 - CH2 - CO - NH2",
+            explanation: "Explanation for Question 39: The Hoffmann bromamide degradation (or rearrangement) reaction is a reaction in which a primary amide reacts with bromine in an aqueous or ethanolic solution of sodium hydroxide to form a primary amine with one less carbon atom than the original amide. The general reaction is RCONH₂ + Br₂ + 4NaOH → RNH₂ + Na₂CO₃ + 2NaBr + 2H₂O. Option D, CH₃CH₂CONH₂ (Propanamide), is a primary amide and will undergo this reaction."
+        },
+        {
+            question: "Which of the following is the weakest Brönsted base?",
+            options: ["CH3NH2", "[Structure representing Aniline]", "[Structure representing N,N-Dimethylaniline?]", "NH3"],
+            answer: "NH3",
+            explanation: "Explanation for Question 40: Brønsted bases are proton acceptors (electron pair donors). Basicity relates to the availability of the lone pair of electrons on the nitrogen atom. Alkyl amines (like CH₃NH₂) and dialkyl/trialkyl amines are generally more basic than ammonia (NH₃) due to the electron-donating inductive effect of alkyl groups, which increases electron density on nitrogen. Aromatic amines (like aniline, C₆H₅NH₂) are weaker bases than ammonia because the lone pair on nitrogen is delocalized into the benzene ring through resonance, making it less available for protonation. Comparing the options: CH₃NH₂ (methylamine) is an aliphatic primary amine, NH₃ is ammonia, Aniline is an aromatic amine. N,N-Dimethylaniline is an aromatic tertiary amine. Aliphatic amines > NH₃ > Aromatic amines in basicity. So, aniline and N,N-Dimethylaniline are weaker than ammonia. Among CH₃NH₂ and NH₃, CH₃NH₂ is more basic. Comparing aniline and N,N-Dimethylaniline, N,N-Dimethylaniline is slightly more basic than aniline (due to inductive effect overriding resonance to some extent). Thus, Aniline is weaker than NH₃. Among the given options, NH₃ is not the weakest. Aniline is weaker than NH₃. The explanation provided states C₆H₅NH₂ (Aniline) is the weakest due to delocalization. This contradicts the provided answer D (NH₃). Based on standard chemical principles, Aniline (option B) is the weakest base among the typical examples (aliphatic amines, NH₃, aromatic amines). Assuming the key is correct with NH₃, there might be a very specific context or error. However, the explanation correctly describes why aniline is weak. I will follow the key but note the discrepancy with the standard explanation."
+        },
+        {
+            question: "When a 1° amine reacts with an alkyl sulfonyl chloride, the major organic product is",
+            options: ["a sulfoxide", "None of these", "a sulphonamide", "a nitrile"],
+            answer: "a sulphonamide",
+            explanation: "Explanation for Question 41: Primary amines (RNH₂) react with alkyl or aryl sulfonyl chlorides (R'SO₂Cl) in the presence of a base to form N-substituted sulfonamides (R'SO₂NHR). This reaction is the basis of the Hinsberg test for distinguishing primary, secondary, and tertiary amines."
+        },
+        {
+            question: "Certain vitamins cannot be stored in the body because",
+            options: ["they are readily excreted in urine", "they are used up very fast in the body", "they are insoluble in water", "they are soluble in fat"],
+            answer: "they are readily excreted in urine",
+            explanation: "Explanation for Question 42: Water-soluble vitamins (B complex vitamins and vitamin C) are not significantly stored in the body. Excess amounts are generally excreted in urine. This is why they need to be consumed regularly. Fat-soluble vitamins (A, D, E, K) are stored in the body's fatty tissues and liver."
+        },
+        {
+            question: "DNA fingerprinting means the",
+            options: ["sequencing the nucleotides in DNA", "sequencing the bases present in double helix", "information regarding the unique sequence of bases on DNA for a person", "information regarding the unique imprints on the fingertip for a person"],
+            answer: "information regarding the unique sequence of bases on DNA for a person",
+            explanation: "Explanation for Question 43: DNA fingerprinting (or profiling) is a technique that uses variations in the genetic code (specifically, differences in the sequence of nucleotides/bases at certain loci in the DNA) to distinguish individuals. While technically it doesn't involve full sequencing, it focuses on specific variable regions to create a unique genetic profile or 'fingerprint'."
+        },
+        {
+            question: "Deficiency of which of the following vitamins causes Pernicious anaemia?",
+            options: ["Vitamin B2", "Vitamin B1", "Vitamin B12", "Vitamin B6"],
+            answer: "Vitamin B12",
+            explanation: "Explanation for Question 44: Pernicious anemia is a type of megaloblastic anemia caused by a deficiency in Vitamin B12 (cyanocobalamin), often due to poor absorption in the gut rather than insufficient intake."
+        },
+        {
+            question: "Nylon -2 - Nylon - 6 is",
+            options: ["non-biodegradable", "polyamide copolymer", "homopolymer", "aromatic polyester"],
+            answer: "polyamide copolymer",
+            explanation: "Explanation for Question 45: Nylon 2-Nylon 6 is synthesized by the copolymerization of two different monomers, glycine and aminocaproic acid. Both monomers contain amine (-NH₂) and carboxylic acid (-COOH) groups, and the resulting polymer contains amide linkages (-CONH-). Therefore, it is a polyamide copolymer."
+        },
+        {
+            question: "Given the polymers: A = Nylon; B = Buna - S; C = Polythene. Arrange these in decreasing order of their intermolecular forces.",
+            options: ["A > C > B", "A > B > C", "C > A > B", "B > C > A"],
+            answer: "A > C > B",
+            explanation: "Explanation for Question 46: The strength of intermolecular forces typically follows the order: Fibers > Thermoplastics > Elastomers. Nylon (A) is a fiber with strong hydrogen bonding. Polythene (C) is a thermoplastic with weaker Van der Waals forces. Buna-S (B) is an elastomer with the weakest intermolecular forces (primarily Van der Waals). Thus, the decreasing order of intermolecular forces is Nylon > Polythene > Buna-S, or A > C > B."
+        },
+        {
+            question: "Which of the following polymers of glucose is stored by animals?",
+            options: ["Cellulose", "Amylopectin", "Glycogen", "Amylose"],
+            answer: "Glycogen",
+            explanation: "Explanation for Question 47: Glycogen is the primary storage polysaccharide in animals (found in liver and muscles). Cellulose is a structural polysaccharide in plants. Amylose and amylopectin are components of starch, the primary storage polysaccharide in plants."
+        },
+        {
+            question: "In seasonal rhinitis and conjunctivitis, the drugs administered are",
+            options: ["Anti - histamine", "Sulpha drugs", "Hypnotics", "Anti - microbials"],
+            answer: "Anti - histamine",
+            explanation: "Explanation for Question 48: Seasonal rhinitis (hay fever) and conjunctivitis are often caused by allergic reactions mediated by histamine. Antihistamines are drugs that block the action of histamine at its receptors, thereby reducing the symptoms of allergy."
+        },
+        {
+            question: "Which is not true for a detergent molecule?",
+            options: ["It is a sodium salt of fatty acid", "It is a surface active agent", "It is not easily biodegraded", "It has a non polar organic part and a polar group"],
+            answer: "It is a sodium salt of fatty acid",
+            explanation: "Explanation for Question 49: Soaps are typically sodium or potassium salts of fatty acids. Detergents, while also surfactants (surface active agents) with a nonpolar hydrocarbon tail and a polar head group, are usually sodium salts of sulphonated long-chain alcohols or hydrocarbons, or quaternary ammonium salts, etc. Biodegradability varies among detergents, but many older synthetic detergents were indeed not easily biodegraded."
+        },
+        {
+            question: "Aspirin is not administered for",
+            options: ["pain - relief", "blood - clotting", "reducing fever", "prevention of heart attacks"],
+            answer: "blood - clotting",
+            explanation: "Explanation for Question 50: Aspirin (acetylsalicylic acid) is used as an analgesic (pain-relief), antipyretic (reducing fever), and as an antiplatelet agent (inhibiting blood clotting) to prevent heart attacks and strokes. Therefore, it is used to *prevent* blood clotting, not to *cause* or aid blood clotting. It is thus not administered *for* blood clotting."
+        }
+    ];
+    
+
+        // --- State Variables ---
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(quizData.length).fill(null);
+        let questionStatus = new Array(quizData.length).fill('default');
+        let markedForReview = new Array(quizData.length).fill(false);
+        let timeSpentPerQuestion = new Array(quizData.length).fill(0);
+        let questionTimerInterval;
+        let totalTimerInterval;
+        let questionViewStartTime = null;
+        let totalTimeSeconds = 50 * 60;
+        let userName = "";
+        let timeChart = null;
+        const QUESTION_TIME_LIMIT = 45;
+
+        // --- DOM Elements ---
+        const landingPage = document.getElementById('landing-page');
+        const quizPage = document.getElementById('quiz-page');
+        const resultsPage = document.getElementById('results-page');
+        const nameInput = document.getElementById('name-input');
+        const startQuizButton = document.getElementById('start-quiz-button');
+        const userNameDisplay = document.getElementById('user-name');
+        const resultUserNameDisplay = document.getElementById('result-user-name');
+        const totalTimerDisplay = document.getElementById('total-timer');
+        const questionNavList = document.getElementById('question-nav-list');
+        const currentQuestionNumberDisplay = document.getElementById('current-question-number');
+        const questionTimerDisplay = document.getElementById('question-timer');
+        const questionText = document.getElementById('question-text');
+        const optionsList = document.getElementById('options-list');
+        const prevButton = document.getElementById('prev-button');
+        const reviewButton = document.getElementById('review-button');
+        const nextButton = document.getElementById('next-button');
+        const scoreDisplay = document.getElementById('score');
+        const totalMarksDisplay = document.getElementById('total-marks');
+        const wrongUnansweredList = document.getElementById('wrong-unanswered-list');
+        const timeChartCanvas = document.getElementById('timeChart');
+        const imageContainer = document.getElementById('question-image-container'); // <-- Get image container
+
+        // --- Functions ---
+
+        function showPage(pageId) {
+            landingPage.classList.add('hidden');
+            quizPage.classList.add('hidden');
+            resultsPage.classList.add('hidden');
+            const pageToShow = document.getElementById(pageId);
+            if (pageToShow) {
+                pageToShow.classList.remove('hidden');
+            }
+        }
+
+        function startQuiz() {
+            userName = nameInput.value.trim() || "Guest";
+            userNameDisplay.textContent = userName;
+            resultUserNameDisplay.textContent = userName;
+            showPage('quiz-page');
+
+            totalMarksDisplay.textContent = quizData.length;
+            initializeQuestionNav();
+            loadQuestion(currentQuestionIndex);
+            startTotalTimer();
+        }
+
+        function initializeQuestionNav() {
+            questionNavList.innerHTML = '';
+            quizData.forEach((_, index) => {
+                const li = document.createElement('li');
+                li.textContent = index + 1;
+                li.classList.add('question-nav-item', `status-${questionStatus[index]}`);
+                li.dataset.index = index;
+                li.addEventListener('click', () => navigateToQuestion(index));
+                questionNavList.appendChild(li);
+            });
+             updateQuestionNavHighlight();
+        }
+
+        function updateQuestionNavHighlight() {
+             const items = questionNavList.querySelectorAll('.question-nav-item');
+             items.forEach((item, index) => {
+                 item.style.borderColor = '';
+                 item.style.borderWidth = '';
+                 if (index === currentQuestionIndex) {
+                     item.style.borderColor = '#007bff';
+                     item.style.borderWidth = '2px';
+                 }
+             });
+        }
+
+
+        function updateSingleQuestionNavStatus(index) {
+            const item = questionNavList.querySelector(`.question-nav-item[data-index="${index}"]`);
+            if (item) {
+                item.classList.remove('status-default', 'status-answered', 'status-unanswered', 'status-review', 'status-answered-review');
+                item.classList.add(`status-${questionStatus[index]}`);
+            }
+        }
+
+        function recordTimeSpent() {
+            if (questionViewStartTime !== null) {
+                const timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                if (timeElapsedThisVisit > 0) {
+                    timeSpentPerQuestion[currentQuestionIndex] += timeElapsedThisVisit;
+                }
+                questionViewStartTime = null;
+            }
+        }
+
+        function updateStatus(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let currentStatus = questionStatus[index];
+            let newStatus = currentStatus;
+
+            if (answered && reviewed) {
+                newStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                newStatus = 'answered';
+            } else if (!answered && reviewed) {
+                newStatus = 'review';
+            } else if (!answered && !reviewed) {
+                if (currentStatus === 'unanswered') {
+                    newStatus = 'unanswered';
+                } else if (currentStatus === 'default') {
+                     newStatus = 'default';
+                } else {
+                    newStatus = 'unanswered';
+                }
+            }
+
+            if (newStatus !== currentStatus) {
+                questionStatus[index] = newStatus;
+                updateSingleQuestionNavStatus(index);
+            }
+        }
+
+        function finalizeStatusOnLeave(index) {
+            const answered = userAnswers[index] !== null;
+            const reviewed = markedForReview[index];
+            let finalStatus = questionStatus[index];
+
+            if (!answered && !reviewed) {
+                finalStatus = 'unanswered';
+            } else if (answered && reviewed) {
+                finalStatus = 'answered-review';
+            } else if (answered && !reviewed) {
+                finalStatus = 'answered';
+            } else if (!answered && reviewed) {
+                finalStatus = 'review';
+            }
+
+            if (finalStatus !== questionStatus[index]) {
+                questionStatus[index] = finalStatus;
+            }
+            updateSingleQuestionNavStatus(index);
+        }
+
+
+        function loadQuestion(index) {
+            const question = quizData[index];
+            currentQuestionNumberDisplay.textContent = `Question ${index + 1} of ${quizData.length}`;
+            questionText.textContent = question.question;
+
+            // --- NEW: Handle Image Display ---
+            imageContainer.innerHTML = ''; // Clear previous image
+            if (question.image) {
+                const imgElement = document.createElement('img');
+                imgElement.src = question.image;
+                imgElement.alt = `Image for question ${index + 1}`; // Add alt text
+                // Style applied via CSS now
+                imageContainer.appendChild(imgElement);
+            }
+            // --- END NEW ---
+
+            optionsList.innerHTML = '';
+            question.options.forEach((option, i) => {
+                const li = document.createElement('li');
+                const inputId = `q${index}_option${i}`;
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `question${index}`;
+                input.value = option;
+                input.id = inputId;
+                input.checked = userAnswers[index] === option;
+                input.addEventListener('change', () => {
+                    userAnswers[index] = option;
+                    updateStatus(index);
+                });
+
+                const label = document.createElement('label');
+                label.htmlFor = inputId;
+                label.textContent = option;
+
+                li.appendChild(input);
+                li.appendChild(label);
+                optionsList.appendChild(li);
+            });
+
+            prevButton.disabled = index === 0;
+            nextButton.textContent = index === quizData.length - 1 ? 'Submit' : 'Next';
+
+            reviewButton.textContent = markedForReview[index] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[index] ? '#5a32a3' : '#6f42c1';
+
+            questionViewStartTime = Date.now();
+            startQuestionTimer();
+
+            updateQuestionNavHighlight();
+
+            const questionAreaWrapper = document.querySelector('.question-area-wrapper');
+            if (questionAreaWrapper) questionAreaWrapper.scrollTop = 0;
+        }
+
+        function navigateToQuestion(index) {
+            if (index < 0 || index >= quizData.length || index === currentQuestionIndex) return;
+
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            currentQuestionIndex = index;
+            loadQuestion(currentQuestionIndex);
+        }
+
+        function handleNext() {
+             const leavingIndex = currentQuestionIndex;
+             recordTimeSpent();
+             finalizeStatusOnLeave(leavingIndex);
+
+             if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion(currentQuestionIndex);
+            } else {
+                submitQuiz();
+            }
+        }
+
+        function handlePrev() {
+            const leavingIndex = currentQuestionIndex;
+            recordTimeSpent();
+            finalizeStatusOnLeave(leavingIndex);
+
+            if (currentQuestionIndex > 0) {
+               currentQuestionIndex--;
+               loadQuestion(currentQuestionIndex);
+            }
+        }
+
+        function toggleReview() {
+            markedForReview[currentQuestionIndex] = !markedForReview[currentQuestionIndex];
+            updateStatus(currentQuestionIndex);
+            reviewButton.textContent = markedForReview[currentQuestionIndex] ? 'Unmark Review' : 'Mark for Review';
+            reviewButton.style.backgroundColor = markedForReview[currentQuestionIndex] ? '#5a32a3' : '#6f42c1';
+        }
+
+
+        function startQuestionTimer() {
+            clearInterval(questionTimerInterval);
+
+            function updateTimerDisplay() {
+                let totalTimeSpentSoFar = timeSpentPerQuestion[currentQuestionIndex];
+                let timeElapsedThisVisit = 0;
+
+                if (questionViewStartTime) {
+                    timeElapsedThisVisit = (Date.now() - questionViewStartTime) / 1000;
+                }
+
+                let currentTotalTime = totalTimeSpentSoFar + timeElapsedThisVisit;
+                let displayTime = Math.round(currentTotalTime);
+
+                questionTimerDisplay.classList.remove('red');
+
+                if (currentTotalTime > QUESTION_TIME_LIMIT) {
+                    let exceededTime = Math.round(currentTotalTime - QUESTION_TIME_LIMIT);
+                    questionTimerDisplay.textContent = `Exceeded: ${exceededTime}s`;
+                    questionTimerDisplay.classList.add('red');
+                } else {
+                     questionTimerDisplay.textContent = `Time: ${displayTime}s`;
+                }
+            }
+
+            updateTimerDisplay();
+            questionTimerInterval = setInterval(updateTimerDisplay, 1000);
+        }
+
+        function startTotalTimer() {
+            clearInterval(totalTimerInterval);
+            let currentTime = totalTimeSeconds;
+
+            totalTimerInterval = setInterval(() => {
+                currentTime--;
+                if (currentTime <= 0) {
+                    clearInterval(totalTimerInterval);
+                    totalTimerDisplay.textContent = '00:00';
+                    alert("Time's up!");
+                    submitQuiz();
+                } else {
+                    const minutes = Math.floor(currentTime / 60);
+                    const seconds = currentTime % 60;
+                    totalTimerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function submitQuiz() {
+            recordTimeSpent();
+            finalizeStatusOnLeave(currentQuestionIndex);
+            clearInterval(questionTimerInterval);
+            clearInterval(totalTimerInterval);
+
+             questionStatus.forEach((status, index) => {
+                 if (index !== currentQuestionIndex) {
+                     finalizeStatusOnLeave(index);
+                 }
+             });
+
+            calculateResults();
+            showPage('results-page');
+        }
+
+        function calculateResults() {
+            let score = 0;
+            wrongUnansweredList.innerHTML = '';
+
+            quizData.forEach((question, index) => {
+                const isCorrect = userAnswers[index] === question.answer;
+                if (isCorrect) {
+                    score++;
+                }
+
+                if (questionStatus[index] === 'unanswered' || (userAnswers[index] !== null && !isCorrect)) {
+                    const resultItem = document.createElement('div');
+                    resultItem.classList.add('result-item');
+
+                    const qText = document.createElement('p');
+                    qText.classList.add('question');
+                    qText.innerHTML = `<strong>Q${index + 1}:</strong> ${question.question}`;
+                    resultItem.appendChild(qText);
+
+                    const yourAns = document.createElement('p');
+                    yourAns.innerHTML = `<strong>Your Answer:</strong> `;
+                    if (userAnswers[index] !== null) {
+                         yourAns.innerHTML += `<span class="your-answer">${userAnswers[index]}</span>`;
+                    } else {
+                         yourAns.innerHTML += `<span class="your-answer">Not Answered</span>`;
+                    }
+                     resultItem.appendChild(yourAns);
+
+
+                    const correctAns = document.createElement('p');
+                    correctAns.innerHTML = `<strong>Correct Answer:</strong> <span class="correct-answer">${question.answer}</span>`;
+                    resultItem.appendChild(correctAns);
+
+                    const explanation = document.createElement('p');
+                    explanation.classList.add('explanation');
+                    explanation.textContent = question.explanation;
+                    resultItem.appendChild(explanation);
+
+                    wrongUnansweredList.appendChild(resultItem);
+                }
+            });
+
+            scoreDisplay.textContent = score;
+            totalMarksDisplay.textContent = quizData.length;
+
+            setTimeout(generateTimeChart, 100);
+        }
+
+         function generateTimeChart() {
+            const ctx = timeChartCanvas.getContext('2d');
+             if (!ctx) {
+                console.error("Failed to get canvas context for time chart.");
+                return;
+            }
+            const labels = quizData.map((_, index) => `Q${index + 1}`);
+            const data = timeSpentPerQuestion.map(time => Math.round(time));
+
+            const normalColor = 'rgba(0, 123, 255, 0.3)';
+            const exceededColor = 'rgba(220, 53, 69, 0.3)';
+            const normalBorder = 'rgba(0, 123, 255, 1)';
+            const exceededBorder = 'rgba(220, 53, 69, 1)';
+
+            if (timeChart) {
+                timeChart.destroy();
+            }
+
+            try {
+                timeChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Time Spent (seconds)',
+                                data: data,
+                                fill: true,
+                                tension: 0.3,
+                                segment: {
+                                    borderColor: ctx => (ctx.p1.parsed.y > QUESTION_TIME_LIMIT) ? exceededBorder : normalBorder,
+                                    backgroundColor: ctx => {
+                                        const y1 = ctx.p0.parsed.y;
+                                        const y2 = ctx.p1.parsed.y;
+                                        return (y1 > QUESTION_TIME_LIMIT || y2 > QUESTION_TIME_LIMIT) ? exceededColor : normalColor;
+                                    }
+                                },
+                                 pointBackgroundColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+                                 pointBorderColor: '#fff',
+                                 pointHoverBackgroundColor: '#fff',
+                                 pointHoverBorderColor: ctx => data[ctx.dataIndex] > QUESTION_TIME_LIMIT ? exceededBorder : normalBorder,
+
+                            },
+                            {
+                                type: 'line',
+                                label: `${QUESTION_TIME_LIMIT}s Threshold`,
+                                data: Array(quizData.length).fill(QUESTION_TIME_LIMIT),
+                                borderColor: 'rgba(220, 53, 69, 0.8)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Time (seconds)'
+                                }
+                            },
+                            x: {
+                                 title: {
+                                    display: true,
+                                    text: 'Question Number'
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.datasetIndex === 1) return null;
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) label += context.parsed.y + 's';
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                         interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                    }
+                });
+            } catch (error) {
+                console.error("Chart.js error:", error);
+            }
+        }
+
+        // --- Event Listeners ---
+        startQuizButton.addEventListener('click', startQuiz);
+        prevButton.addEventListener('click', handlePrev);
+        nextButton.addEventListener('click', handleNext);
+        reviewButton.addEventListener('click', toggleReview);
+
+         nameInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                startQuizButton.click();
+            }
+        });
+
+        // --- Initial Setup ---
+        showPage('landing-page');
+
+    </script>
+
+</body>
+</html>
